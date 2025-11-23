@@ -97,10 +97,9 @@ tempfile = { version = "3.20.0", default-features = false }
 lightningcss = { version = "1.0.0-alpha.57", default-features = false, features = [
     "grid",
 ] }
-# Disabled until bug fixing update
-# minify-js = { version = "0.6.0", default-features = false }
+minify-js = { version = "0.6.0", default-features = false }
 # Temporary fork with fix
-minify-js = { git = "https://github.com/RuairidhWilliamson/minify-js", branch = "master", version = "0.6.0", default-features = false} 
+# minify-js = { git = "https://github.com/RuairidhWilliamson/minify-js", branch = "master", version = "0.6.0", default-features = false} 
 
 [lints.rust]
 unsafe_code = "forbid"

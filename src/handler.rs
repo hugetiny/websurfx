@@ -51,7 +51,7 @@ static FILE_PATHS_FOR_DIFF_FILE_TYPES: OnceCell<Vec<(FileType, Vec<String>)>> =
 /// 2. Under project folder ( or codebase in other words) if it is not present
 ///    here then it returns an error as mentioned above.
 pub async fn file_path(file_type: FileType) -> Result<String, Error> {
-    let home = env!("HOME");
+    let home = std::env::var("HOME").unwrap_or_else(|_| std::env::var("USERPROFILE").unwrap_or_else(|_| ".".to_string()));
 
     let file_path: Vec<String> = FILE_PATHS_FOR_DIFF_FILE_TYPES
         .get_or_init(|| async move {
@@ -59,6 +59,9 @@ pub async fn file_path(file_type: FileType) -> Result<String, Error> {
                 (
                     FileType::Config,
                     vec![
+                        // Tauri-specific paths (inside src-tauri/websurfx)
+                        format!("./websurfx/{}", CONFIG_FILE_NAME),
+                        format!("./src-tauri/websurfx/{}", CONFIG_FILE_NAME),
                         format!(
                             "{}/.config/{}/{}",
                             home, COMMON_DIRECTORY_NAME, CONFIG_FILE_NAME
@@ -70,6 +73,9 @@ pub async fn file_path(file_type: FileType) -> Result<String, Error> {
                 (
                     FileType::Theme,
                     vec![
+                        // Tauri-specific paths
+                        format!("./websurfx/{}/", PUBLIC_DIRECTORY_NAME),
+                        format!("./src-tauri/websurfx/{}/", PUBLIC_DIRECTORY_NAME),
                         format!("/opt/websurfx/{}/", PUBLIC_DIRECTORY_NAME),
                         format!("./{}/", PUBLIC_DIRECTORY_NAME),
                     ],
@@ -77,6 +83,8 @@ pub async fn file_path(file_type: FileType) -> Result<String, Error> {
                 (
                     FileType::AllowList,
                     vec![
+                        format!("./websurfx/{}", ALLOWLIST_FILE_NAME),
+                        format!("./src-tauri/websurfx/{}", ALLOWLIST_FILE_NAME),
                         format!(
                             "{}/.config/{}/{}",
                             home, COMMON_DIRECTORY_NAME, ALLOWLIST_FILE_NAME
@@ -88,6 +96,8 @@ pub async fn file_path(file_type: FileType) -> Result<String, Error> {
                 (
                     FileType::BlockList,
                     vec![
+                        format!("./websurfx/{}", BLOCKLIST_FILE_NAME),
+                        format!("./src-tauri/websurfx/{}", BLOCKLIST_FILE_NAME),
                         format!(
                             "{}/.config/{}/{}",
                             home, COMMON_DIRECTORY_NAME, BLOCKLIST_FILE_NAME

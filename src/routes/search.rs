@@ -45,6 +45,21 @@ static SHARED_CACHE: OnceCell<SharedCache> = OnceCell::const_new();
 /// ```bash
 /// curl "http://127.0.0.1:8080/search?q=sweden"
 /// ```
+/// SearXNG compatible JSON response format
+#[derive(serde::Serialize)]
+struct SearxngResult {
+    title: String,
+    url: String,
+    content: String,
+}
+
+/// SearXNG compatible JSON response structure
+#[derive(serde::Serialize)]
+struct SearxngResponse {
+    results: Vec<SearxngResult>,
+    suggestions: Vec<String>,
+}
+
 #[get("/search")]
 pub async fn search(
     req: HttpRequest,
@@ -56,6 +71,9 @@ pub async fn search(
         .await?;
 
     let params = web::Query::<SearchParams>::from_query(req.query_string())?;
+    
+    // Check if JSON format is requested
+    let format_is_json = req.query_string().contains("format=json");
 
     if let Some(query) = &params.q {
         if query.trim().is_empty() {
@@ -188,6 +206,28 @@ pub async fn search(
         #[cfg(not(any(feature = "redis-cache", feature = "memory-cache")))]
         {
             current_results = results(&config, query, page, &search_settings, user_agent).await?;
+        }
+
+        // Return JSON response if format=json is requested (SearXNG compatibility)
+        if format_is_json {
+            let searxng_results: Vec<SearxngResult> = current_results
+                .results
+                .iter()
+                .map(|result| SearxngResult {
+                    title: result.title.clone(),
+                    url: result.url.clone(),
+                    content: result.description.clone(),
+                })
+                .collect();
+
+            let response = SearxngResponse {
+                results: searxng_results,
+                suggestions: vec![], // WebSurfX doesn't provide suggestions
+            };
+
+            return Ok(HttpResponse::Ok()
+                .content_type(ContentType::json())
+                .body(serde_json::to_string(&response)?));
         }
 
         return Ok(HttpResponse::Ok().content_type(ContentType::html()).body(

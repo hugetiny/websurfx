@@ -178,7 +178,7 @@ fn set_logging_level(debug: bool, logging: bool) {
     if let Ok(pkg_env_var) = std::env::var("PKG_ENV") {
         if pkg_env_var.to_lowercase() == "dev" {
             env_logger::Builder::new()
-                .filter(None, LevelFilter::Trace)
+                .filter(None, LevelFilter::Info)
                 .init();
             return;
         }
