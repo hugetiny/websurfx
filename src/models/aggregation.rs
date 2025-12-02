@@ -107,6 +107,7 @@ impl SearchResult {
 
 /// A named struct that stores the error info related to the upstream search engines.
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct EngineErrorInfo {
     /// It stores the error type which occured while fetching the result from a particular search
     /// engine.
@@ -116,10 +117,14 @@ pub struct EngineErrorInfo {
     /// It stores the name of the color to indicate whether how severe the particular error is (In
     /// other words it indicates the severity of the error/issue).
     pub severity_color: String,
+    /// Whether the engine was suspended due to this error
+    pub suspended: bool,
+    /// Remaining suspension time in seconds (0 if not suspended)
+    pub suspension_remaining_secs: u64,
 }
 
 impl EngineErrorInfo {
-    /// Constructs a new `SearchResult` with the given arguments needed for the struct.
+    /// Constructs a new `EngineErrorInfo` with the given arguments needed for the struct.
     ///
     /// # Arguments
     ///
@@ -132,16 +137,42 @@ impl EngineErrorInfo {
                 EngineError::NoSuchEngineFound(_) => "EngineNotFound".to_owned(),
                 EngineError::RequestError => "RequestError".to_owned(),
                 EngineError::EmptyResultSet => "EmptyResultSet".to_owned(),
+                EngineError::Timeout => "Timeout".to_owned(),
+                EngineError::AccessDenied => "AccessDenied".to_owned(),
+                EngineError::Captcha => "Captcha".to_owned(),
+                EngineError::TooManyRequests => "TooManyRequests".to_owned(),
+                EngineError::SslError => "SslError".to_owned(),
+                EngineError::HttpError(code) => format!("HttpError_{}", code),
+                EngineError::ParseError => "ParseError".to_owned(),
+                EngineError::NetworkError => "NetworkError".to_owned(),
                 EngineError::UnexpectedError => "UnexpectedError".to_owned(),
             },
             engine: engine.to_owned(),
             severity_color: match error {
                 EngineError::NoSuchEngineFound(_) => "red".to_owned(),
-                EngineError::RequestError => "green".to_owned(),
+                EngineError::RequestError => "yellow".to_owned(),
                 EngineError::EmptyResultSet => "blue".to_owned(),
+                EngineError::Timeout => "yellow".to_owned(),
+                EngineError::AccessDenied => "red".to_owned(),
+                EngineError::Captcha => "red".to_owned(),
+                EngineError::TooManyRequests => "orange".to_owned(),
+                EngineError::SslError => "red".to_owned(),
+                EngineError::HttpError(_) => "orange".to_owned(),
+                EngineError::ParseError => "yellow".to_owned(),
+                EngineError::NetworkError => "yellow".to_owned(),
                 EngineError::UnexpectedError => "red".to_owned(),
             },
+            suspended: false,
+            suspension_remaining_secs: 0,
         }
+    }
+
+    /// Create error info with suspension details
+    pub fn with_suspension(error: &EngineError, engine: &str, suspended: bool, remaining_secs: u64) -> Self {
+        let mut info = Self::new(error, engine);
+        info.suspended = suspended;
+        info.suspension_remaining_secs = remaining_secs;
+        info
     }
 }
 

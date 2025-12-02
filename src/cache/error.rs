@@ -2,14 +2,12 @@
 //! the redis server using an async connection pool.
 use std::fmt;
 
-#[cfg(feature = "redis-cache")]
 use redis::RedisError;
 
 /// A custom error type used for handling redis async pool associated errors.
 #[derive(Debug)]
 pub enum CacheError {
     /// This variant handles all errors related to `RedisError`,
-    #[cfg(feature = "redis-cache")]
     RedisError(RedisError),
     /// This variant handles the errors which occurs when all the connections
     /// in the connection pool return a connection dropped redis error.
@@ -29,7 +27,6 @@ pub enum CacheError {
 impl fmt::Display for CacheError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            #[cfg(feature = "redis-cache")]
             CacheError::RedisError(redis_error) => {
                 if let Some(detail) = redis_error.detail() {
                     write!(f, "{}", detail)

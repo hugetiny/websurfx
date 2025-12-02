@@ -1,7 +1,7 @@
 //! This module provides the functionality to cache the aggregated results fetched and aggregated
 //! from the upstream search engines in a json format.
 
-use super::{Cacher, error::CacheError};
+use super::error::CacheError;
 use crate::models::aggregation::SearchResults;
 use crate::parser::Config;
 use error_stack::Report;
@@ -66,6 +66,25 @@ impl RedisCache {
         Ok(redis_cache)
     }
 
+    /// Builds a new RedisCache instance from configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - The configuration struct containing Redis settings.
+    ///
+    /// # Returns
+    ///
+    /// Returns a new RedisCache instance.
+    pub async fn build(config: &Config) -> Self {
+        log::info!(
+            "Initialising redis cache. Listening to {}",
+            &config.redis_url
+        );
+        RedisCache::new(&config.redis_url, 5, config.cache_expiry_time)
+            .await
+            .expect("Redis cache configured")
+    }
+
     /// A helper function which checks each connection in the pool to verify if the connections are
     /// still usable (basically have they not been dropped or disconnected from the server) or not
     /// and if they are usuable then it returns that connection from the pool.
@@ -89,13 +108,12 @@ impl RedisCache {
     /// A function which checks whether the cached value exists or not.
     ///
     /// # Arguments
-    ///  
-    /// * `key` - It takes a string as key.
+    ///
+    /// * `keys` - It takes a slice of strings as keys.
     ///
     /// # Error
     ///
-    /// Returns the json as a String from the cache on success otherwise returns a `CacheError`
-    /// on a failure.
+    /// Returns a vector of booleans indicating existence for each key.
     pub async fn cached_json_exists(
         &mut self,
         keys: &[String],
@@ -129,17 +147,16 @@ impl RedisCache {
     }
 
     /// A function which caches the json by using the key and
-    /// `json results` as the value and stores it in redis server with ttl(time to live)
-    /// set to 60 seconds.
+    /// `json results` as the value and stores it in redis server with ttl(time to live).
     ///
     /// # Arguments
     ///
     /// * `json_results` - It takes the json results string as an argument.
-    /// * `key` - It takes the key as a String.
+    /// * `keys` - It takes the keys as Strings.
     ///
     /// # Error
     ///
-    /// Returns an unit type if the results are cached succesfully otherwise returns a `CacheError`
+    /// Returns an unit type if the results are cached successfully otherwise returns a `CacheError`
     /// on a failure.
     pub async fn cache_json(
         &mut self,
@@ -162,28 +179,17 @@ impl RedisCache {
             .await
             .map_err(|error| Report::new(CacheError::RedisError(error)))
     }
-}
 
-#[async_trait::async_trait]
-impl Cacher for RedisCache {
-    async fn build(config: &Config) -> Self {
-        log::info!(
-            "Initialising redis cache. Listening to {}",
-            &config.redis_url
-        );
-        RedisCache::new(&config.redis_url, 5, config.cache_expiry_time)
-            .await
-            .expect("Redis cache configured")
-    }
-
-    async fn cached_results_exists(
+    /// Checks if cached results exist for the given URLs.
+    pub async fn cached_results_exists(
         &mut self,
         urls: &[String],
     ) -> Result<Vec<bool>, Report<CacheError>> {
-        Ok(self.cached_json_exists(urls).await?)
+        self.cached_json_exists(urls).await
     }
 
-    async fn cached_results(&mut self, url: &str) -> Result<SearchResults, Report<CacheError>> {
+    /// Fetches cached results for the given URL.
+    pub async fn cached_results(&mut self, url: &str) -> Result<SearchResults, Report<CacheError>> {
         use base64::Engine;
         let base64_string = self.cached_json(url).await?;
 
@@ -194,24 +200,25 @@ impl Cacher for RedisCache {
         .map_err(|_| CacheError::Base64DecodingOrEncodingError)?
         .map_err(|_| CacheError::Base64DecodingOrEncodingError)?;
 
-        self.post_process_search_results(bytes).await
+        bincode::deserialize_from(bytes.as_slice())
+            .map_err(|_| Report::new(CacheError::SerializationError))
     }
 
-    async fn cache_results(
+    /// Caches search results with their corresponding URLs.
+    pub async fn cache_results(
         &mut self,
         search_results: &[SearchResults],
         urls: &[String],
     ) -> Result<(), Report<CacheError>> {
         use base64::Engine;
 
-        // size of search_results is expected to be equal to size of urls -> key/value pairs  for cache;
         let search_results_len = search_results.len();
-
         let mut bytes = Vec::with_capacity(search_results_len);
 
         for result in search_results {
-            let processed = self.pre_process_search_results(result).await?;
-            bytes.push(processed);
+            let serialized = bincode::serialize(result)
+                .map_err(|_| CacheError::SerializationError)?;
+            bytes.push(serialized);
         }
 
         let base64_strings = tokio::task::spawn_blocking(move || {

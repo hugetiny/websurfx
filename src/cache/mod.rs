@@ -1,35 +1,30 @@
 //! This module provides the modules which provide the functionality to cache the aggregated
 //! results fetched and aggregated from the upstream search engines in a json format.
 
-use crate::{models::aggregation::SearchResults, parser::Config};
+use crate::models::aggregation::SearchResults;
+use crate::models::parser::CacheBackend;
+use crate::parser::Config;
 use arc_swap::ArcSwap;
 use error::CacheError;
 use error_stack::Report;
-use std::convert::TryInto;
-
-#[cfg(feature = "redis-cache")]
+use memory::InMemoryCache;
 use redis::RedisCache;
-
-#[cfg(feature = "memory-cache")]
-use {memory::InMemoryCache, std::sync::Arc};
-
-#[cfg(feature = "redis-cache")]
-#[cfg(any(feature = "encrypt-cache-results", feature = "cec-cache-results"))]
-use encryption::*;
+use std::convert::TryInto;
+use std::sync::Arc;
 
 pub mod error;
+pub mod memory;
+pub mod redis;
 
 #[cfg(any(feature = "encrypt-cache-results", feature = "cec-cache-results"))]
 /// encryption module contains encryption utils such the cipher and key
 pub mod encryption;
 
-#[cfg(feature = "redis-cache")]
-pub mod redis;
-
-#[cfg(feature = "memory-cache")]
-pub mod memory;
+#[cfg(any(feature = "encrypt-cache-results", feature = "cec-cache-results"))]
+use encryption::*;
 
 /// Abstraction trait for common methods provided by a cache backend.
+#[allow(dead_code)]
 #[async_trait::async_trait]
 trait Cacher: Send + Sync {
     // A function that builds the cache from the given configuration.
@@ -336,136 +331,66 @@ async fn decompress_util(input: &[u8]) -> Result<Vec<u8>, Report<CacheError>> {
     Ok(bytes)
 }
 
-/// A named struct holding the cache configuration structs and provided when the respective
-/// features or both enabled.
+/// An enum that wraps different cache backend implementations for runtime selection.
 #[derive(Clone)]
-pub struct SwitchCache {
-    /// It holds the redis server configuration struct.
-    #[cfg(feature = "redis-cache")]
-    pub redis_cache: RedisCache,
-    /// It holds the moka cache server configuration struct.
-    #[cfg(feature = "memory-cache")]
-    pub memory_cache: InMemoryCache,
+pub enum CacheWrapper {
+    /// In-memory cache using moka
+    Memory(InMemoryCache),
+    /// Redis cache
+    Redis(RedisCache),
 }
 
-impl SwitchCache {
-    /// A function that builds/initializes the redis cache struct or memory cache according to the
-    /// feature flags enabled.
+impl CacheWrapper {
+    /// Creates a new cache wrapper based on the configuration.
     ///
     /// # Arguments
     ///
-    /// * `config` - It takes the config struct value.
+    /// * `config` - The configuration struct containing cache settings.
     ///
-    /// # Error
+    /// # Returns
     ///
-    /// Returns the build struct containing the appropriate initialized caching server struct that
-    /// is redis cache or memory cache on success otherwise throws an appropriate error message.
+    /// Returns a new CacheWrapper instance.
     async fn build(config: &Config) -> Result<Self, Box<dyn std::error::Error>> {
-        Ok(Self {
-            #[cfg(feature = "redis-cache")]
-            redis_cache: RedisCache::build(config).await,
-            #[cfg(feature = "memory-cache")]
-            memory_cache: InMemoryCache::build(config).await,
-        })
+        match config.cache_backend {
+            CacheBackend::Memory => {
+                log::info!("Initializing in-memory cache backend");
+                Ok(CacheWrapper::Memory(InMemoryCache::build(config).await))
+            }
+            CacheBackend::Redis => {
+                log::info!("Initializing Redis cache backend at {}", config.redis_url);
+                Ok(CacheWrapper::Redis(RedisCache::build(config).await))
+            }
+        }
     }
 
-    /// A function that checks if the cached results exists in the respective cache server or not.
-    ///
-    /// # Arguments
-    ///
-    /// * `urls` - It takes the hashed search urls as an argument which will be used as the key to
-    ///   check whether the cache exists or not.
-    ///
-    /// # Error
-    ///
-    /// Returns a Vector containing booleans for each respective url if nothing goes wrong otherwise
-    /// returns a `CacheError`.
+    /// Checks if cached results exist.
     async fn cached_results_exists(
         &mut self,
         urls: &[String],
     ) -> Result<Vec<bool>, Report<CacheError>> {
-        #[cfg(all(feature = "redis-cache", not(feature = "memory-cache")))]
-        {
-            self.redis_cache.cached_results_exists(urls).await
-        }
-
-        #[cfg(all(feature = "memory-cache", not(feature = "redis-cache")))]
-        {
-            self.memory_cache.cached_results_exists(urls).await
-        }
-
-        #[cfg(all(feature = "memory-cache", feature = "redis-cache"))]
-        {
-            match self.redis_cache.cached_results_exists(urls).await {
-                Ok(res) => Ok(res),
-                Err(_) => self.memory_cache.cached_results_exists(urls).await,
-            }
+        match self {
+            CacheWrapper::Memory(cache) => cache.cached_results_exists(urls).await,
+            CacheWrapper::Redis(cache) => cache.cached_results_exists(urls).await,
         }
     }
 
-    /// A function that fetches the cached data from the respective cache servers.
-    ///
-    /// # Arguments
-    ///
-    /// * `url` - takes the url parameter as string which will be used as key to fetch the data
-    ///   from the cache.
-    ///
-    /// # Error
-    ///
-    /// Returns the cached data on success otherwise returns a custom CacheError on failure.
+    /// Fetches cached results.
     async fn cached_results(&mut self, url: &str) -> Result<SearchResults, Report<CacheError>> {
-        #[cfg(all(feature = "redis-cache", not(feature = "memory-cache")))]
-        {
-            self.redis_cache.cached_results(url).await
-        }
-
-        #[cfg(all(feature = "memory-cache", not(feature = "redis-cache")))]
-        {
-            self.memory_cache.cached_results(url).await
-        }
-
-        #[cfg(all(feature = "memory-cache", feature = "redis-cache"))]
-        {
-            match self.redis_cache.cached_results(url).await {
-                Ok(res) => Ok(res),
-                Err(_) => self.memory_cache.cached_results(url).await,
-            }
+        match self {
+            CacheWrapper::Memory(cache) => cache.cached_results(url).await,
+            CacheWrapper::Redis(cache) => cache.cached_results(url).await,
         }
     }
 
-    /// A function that caches the results to the respective cache servers.
-    ///
-    /// # Arguments
-    ///
-    /// * `urls` - takes the list of urls for each page which will be used as key for the results
-    ///   to be cached.
-    /// * `search_results` - takes the list of search_results for each page as the value for the
-    ///   respective url key for that page.
-    ///
-    /// # Error
-    ///
-    /// Returns the cached data on success otherwise returns a custom CacheError on failure.
+    /// Caches results.
     async fn cache_results(
         &mut self,
         search_results: &[SearchResults],
         urls: &[String],
     ) -> Result<(), Report<CacheError>> {
-        #[cfg(all(feature = "redis-cache", not(feature = "memory-cache")))]
-        {
-            self.redis_cache.cache_results(search_results, urls).await
-        }
-
-        #[cfg(all(feature = "memory-cache", not(feature = "redis-cache")))]
-        {
-            self.memory_cache.cache_results(search_results, urls).await
-        }
-
-        #[cfg(all(feature = "memory-cache", feature = "redis-cache"))]
-        {
-            match self.redis_cache.cache_results(search_results, urls).await {
-                Ok(res) => Ok(res),
-                Err(_) => self.memory_cache.cache_results(search_results, urls).await,
-            }
+        match self {
+            CacheWrapper::Memory(cache) => cache.cache_results(search_results, urls).await,
+            CacheWrapper::Redis(cache) => cache.cache_results(search_results, urls).await,
         }
     }
 }
@@ -489,19 +414,19 @@ impl TryInto<Vec<u8>> for &SearchResults {
 
 /// A structure to efficiently share the cache between threads - as it is protected by a lock-free
 /// ArcSwap structure.
-pub struct SharedCache(ArcSwap<SwitchCache>);
+pub struct SharedCache(ArcSwap<CacheWrapper>);
 
 impl SharedCache {
     /// A function that creates a new `SharedCache` from a Cache implementation.
     ///
     /// # Arguments
     ///
-    /// * `cache` - It takes the `Cache` enum variant as an argument with the prefered cache type.
+    /// * `config` - It takes the config struct as an argument.
     ///
     /// Returns a newly constructed `SharedCache` struct.
     pub async fn new(config: &Config) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self(ArcSwap::from_pointee(
-            SwitchCache::build(config).await?,
+            CacheWrapper::build(config).await?,
         )))
     }
 
@@ -509,8 +434,8 @@ impl SharedCache {
     ///
     /// # Returns
     ///
-    /// returns an owned copy of the `SwitchCache` struct.
-    fn cache(&self) -> SwitchCache {
+    /// returns an owned copy of the `CacheWrapper` enum.
+    fn cache(&self) -> CacheWrapper {
         (*self.0.load_full()).clone()
     }
 
@@ -532,7 +457,7 @@ impl SharedCache {
         self.cache().cached_results_exists(urls).await
     }
 
-    /// A getter function which retrieves the cached SearchResulsts from the internal cache.
+    /// A getter function which retrieves the cached SearchResults from the internal cache.
     ///
     /// # Arguments
     ///
@@ -559,7 +484,7 @@ impl SharedCache {
     ///
     /// # Error
     ///
-    /// Returns an unit type if the results are cached succesfully otherwise returns a `CacheError`
+    /// Returns an unit type if the results are cached successfully otherwise returns a `CacheError`
     /// on a failure.
     pub async fn cache_results(
         &self,
@@ -568,10 +493,7 @@ impl SharedCache {
     ) -> Result<(), Report<CacheError>> {
         let mut mut_cache = self.cache();
         let cache_results = mut_cache.cache_results(search_results, urls).await;
-
-        #[cfg(feature = "memory-cache")]
         self.0.store(Arc::new(mut_cache));
-
         cache_results
     }
 }

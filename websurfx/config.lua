@@ -65,10 +65,37 @@ theme = "simple" -- the theme name which should be used for the website
 animation = "simple-frosted-glow" -- the animation name which should be used with the theme or `nil` if you don't want any animations.
 
 -- ### Caching ###
-redis_url = "redis://127.0.0.1:8082" -- redis connection url address on which the client should connect on.
+-- Cache backend type: "memory" for in-memory cache, "redis" for Redis cache
+-- "memory" is recommended for client/desktop applications (no external dependencies)
+-- "redis" requires a running Redis server
+cache_backend = "memory"
+redis_url = "redis://127.0.0.1:8082" -- redis connection url address on which the client should connect on (only used when cache_backend = "redis").
 cache_expiry_time = 600 -- This option takes the expiry time of the search results (value in seconds and the value should be greater than or equal to 60 seconds).
+
+-- ### Engine Health Management ###
+-- Configuration for automatic engine suspension when errors occur
+-- Similar to SearXNG's engine management functionality
+engine_health = {
+	-- Suspension times in seconds for different error types
+	suspended_times = {
+		access_denied = 86400,      -- 1 day for access denied/blocked (HTTP 403)
+		captcha = 86400,            -- 1 day for CAPTCHA required
+		too_many_requests = 3600,   -- 1 hour for rate limiting (HTTP 429)
+		timeout = 60,               -- 1 minute for timeout errors
+		ssl_error = 3600,           -- 1 hour for SSL/TLS errors
+		http_error = 300,           -- 5 minutes for other HTTP errors
+		parse_error = 600,          -- 10 minutes for parsing errors
+	},
+	-- Dynamic ban time settings
+	ban_time_on_fail = 5,           -- Base ban time in seconds after an error
+	max_ban_time_on_fail = 120,     -- Maximum ban time in seconds (exponential backoff cap)
+	-- Whether to enable automatic suspension
+	enable_auto_suspend = true,
+}
+
 -- ### Search Engines ###
 upstream_search_engines = {
+	-- General Search Engines
 	DuckDuckGo = true,
 	Searx = false,
 	Brave = false,
@@ -76,8 +103,49 @@ upstream_search_engines = {
 	LibreX = false,
 	Mojeek = false,
 	Bing = false,
-	Wikipedia = true,
 	Yahoo = false,
+	Google = false,      -- May require anti-bot measures
+	Qwant = false,       -- Privacy-focused French search engine
+	Yandex = false,      -- Russian search engine
+	Ask = false,         -- Ask.com
+
+	-- Chinese Search Engines
+	Baidu = true,        -- Largest Chinese search engine
+	Sogou = false,       -- Major Chinese search engine
+	Search360 = false,   -- 360 Search (Qihoo)
+	Chinaso = false,     -- Chinese national search engine
+
+	-- Asian Search Engines
+	Naver = false,       -- South Korean search engine
+
+	-- Reference
+	Wikipedia = true,
+	Wikidata = false,    -- Structured knowledge base
+	OpenLibrary = false, -- Free book library
+
+	-- Developer Tools
+	GitHub = false,      -- Code repositories
+	StackExchange = false, -- Q&A for developers
+	npm = false,         -- Node.js packages
+	PyPI = false,        -- Python packages
+	Crates = false,      -- Rust packages (crates.io)
+	DockerHub = false,   -- Docker images
+	HuggingFace = false, -- AI/ML models
+
+	-- Academic
+	arXiv = false,       -- Scientific papers
+	PubMed = false,      -- Medical literature
+
+	-- Social/Community
+	HackerNews = false,  -- Tech news and discussions
+	Reddit = false,      -- Community discussions
+
+	-- Media
+	YouTube = false,     -- Video platform (via Invidious)
+	Bilibili = false,    -- Chinese video platform
+	SoundCloud = false,  -- Music streaming
+	IMDb = false,        -- Movie database
+	Unsplash = false,    -- Free photos
 } -- select the upstream search engines from which the results should be fetched.
 
 proxy = nil -- Proxy to send outgoing requests through. Set to nil to disable.

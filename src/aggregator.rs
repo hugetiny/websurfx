@@ -5,6 +5,7 @@ use crate::handler::{FileType, file_path};
 use crate::models::{
     aggregation::{EngineErrorInfo, SearchResult, SearchResults},
     engine::{EngineError, EngineHandler},
+    engine_health::get_health_manager,
 };
 use crate::parser::Config;
 
@@ -14,6 +15,7 @@ use rayon::slice::ParallelSliceMut;
 use regex::Regex;
 use reqwest::{Client, ClientBuilder};
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::task::JoinSet;
 use tokio::{
     fs::File,
@@ -96,15 +98,42 @@ pub async fn aggregate(
         cb.build().unwrap()
     });
 
+    let health_manager = get_health_manager();
     let mut names: Vec<&str> = Vec::with_capacity(0);
+    let mut start_times: Vec<Instant> = Vec::new();
 
     // create tasks for upstream result fetching
     let mut tasks: FutureVec = JoinSet::new();
 
     let query: Arc<String> = Arc::new(query.to_string());
+
+    // Filter out suspended engines and create tasks for active ones
+    let mut engine_errors_info: Vec<EngineErrorInfo> = Vec::new();
+
     for engine_handler in upstream_search_engines {
         let (name, search_engine) = engine_handler.clone().into_name_engine();
+
+        // Check if engine is suspended
+        if health_manager.is_suspended(name) {
+            if let Some((remaining, reason)) = health_manager.get_suspension_info(name) {
+                log::info!(
+                    "Engine '{}' is suspended for {} more seconds (reason: {})",
+                    name, remaining, reason
+                );
+                // Add suspended engine to error info
+                engine_errors_info.push(EngineErrorInfo {
+                    error: "Suspended".to_string(),
+                    engine: name.to_string(),
+                    severity_color: "orange".to_string(),
+                    suspended: true,
+                    suspension_remaining_secs: remaining,
+                });
+            }
+            continue;
+        }
+
         names.push(name);
+        start_times.push(Instant::now());
         let query_partially_cloned = query.clone();
         tasks.spawn(async move {
             search_engine
@@ -121,20 +150,49 @@ pub async fn aggregate(
 
     // aggregate search results, removing duplicates and handling errors the upstream engines returned
     let mut result_map: Vec<(String, SearchResult)> = Vec::new();
-    let mut engine_errors_info: Vec<EngineErrorInfo> = Vec::new();
 
-    let mut handle_error = |error: &Report<EngineError>, engine_name: &'static str| {
-        log::error!("Engine Error: {:?}", error);
-        engine_errors_info.push(EngineErrorInfo::new(
-            error.downcast_ref::<EngineError>().unwrap(),
+    let handle_error = |error: &Report<EngineError>, engine_name: &'static str, errors: &mut Vec<EngineErrorInfo>| {
+        log::error!("Engine Error from '{}': {:?}", engine_name, error);
+
+        let engine_error = error.downcast_ref::<EngineError>().unwrap();
+        let error_type = engine_error.to_error_type();
+
+        // Record error in health manager
+        let was_suspended = health_manager.record_error(
             engine_name,
+            error_type.clone(),
+            Some(error.to_string()),
+        );
+
+        // Get suspension info if suspended
+        let (remaining_secs, is_suspended) = if was_suspended {
+            health_manager.get_suspension_info(engine_name)
+                .map(|(r, _)| (r, true))
+                .unwrap_or((0, false))
+        } else {
+            (0, false)
+        };
+
+        errors.push(EngineErrorInfo::with_suspension(
+            engine_error,
+            engine_name,
+            is_suspended,
+            remaining_secs,
         ));
     };
 
+    let mut idx = 0;
     while let Some(Ok(response)) = tasks.join_next().await {
         let engine = names.pop().unwrap();
+        let start_time = start_times.pop().unwrap_or_else(Instant::now);
+        let elapsed_ms = start_time.elapsed().as_millis() as u64;
 
         if let Ok(result) = response {
+            let result_count = result.len();
+
+            // Record success in health manager
+            health_manager.record_success(engine, elapsed_ms, result_count);
+
             for (key, value) in result {
                 if let Some(value) = result_map.iter().find(|(key_s, _)| key_s == &key) {
                     value.1.to_owned().add_engines(engine)
@@ -143,9 +201,11 @@ pub async fn aggregate(
                 }
             }
         } else if let Err(error) = response {
-            handle_error(&error, engine)
+            handle_error(&error, engine, &mut engine_errors_info)
         }
+        idx += 1;
     }
+    let _ = idx; // Suppress unused warning
 
     if safe_search >= 3 {
         let mut blacklist_map: Vec<(String, SearchResult)> = Vec::new();

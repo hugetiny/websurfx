@@ -1,6 +1,36 @@
 //! This module provides public models for handling, storing and serializing parsed config file
 //! options from config.lua by grouping them together.
 
+use super::engine_health::SuspendedTimesConfig;
+
+/// An enum type which provides different variants for cache backend types.
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CacheBackend {
+    /// Use in-memory cache (moka) - recommended for desktop/client applications
+    #[default]
+    Memory,
+    /// Use Redis cache - requires a running Redis server
+    Redis,
+}
+
+impl CacheBackend {
+    /// Parses a string into a CacheBackend variant.
+    ///
+    /// # Arguments
+    ///
+    /// * `s` - The string to parse.
+    ///
+    /// # Returns
+    ///
+    /// Returns the corresponding CacheBackend variant, defaulting to Memory if unrecognized.
+    pub fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "redis" => CacheBackend::Redis,
+            _ => CacheBackend::Memory,
+        }
+    }
+}
+
 /// A named struct which stores,deserializes, serializes and groups the parsed config file options
 /// of theme and colorscheme names into the Style struct which derives the `Clone`, `Serialize`
 /// and Deserialize traits where the `Clone` trait is derived for allowing the struct to be
@@ -52,4 +82,22 @@ pub struct RateLimiter {
     pub number_of_requests: u8,
     /// The time limit in which the quantity of requests that should be accepted.
     pub time_limit: u8,
+}
+
+/// Configuration options for engine health management.
+#[derive(Clone)]
+pub struct EngineHealthConfig {
+    /// Suspension times configuration
+    pub suspended_times: SuspendedTimesConfig,
+    /// Whether automatic suspension is enabled
+    pub enable_auto_suspend: bool,
+}
+
+impl Default for EngineHealthConfig {
+    fn default() -> Self {
+        Self {
+            suspended_times: SuspendedTimesConfig::default(),
+            enable_auto_suspend: true,
+        }
+    }
 }

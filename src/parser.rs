@@ -2,8 +2,8 @@
 //! into rust readable form.
 
 use crate::handler::{FileType, file_path};
-
-use crate::models::parser::{AggregatorConfig, RateLimiter, Style};
+use crate::models::engine_health::{SuspendedTimesConfig, init_health_manager};
+use crate::models::parser::{AggregatorConfig, CacheBackend, EngineHealthConfig, RateLimiter, Style};
 use log::LevelFilter;
 use mlua::Lua;
 use reqwest::Proxy;
@@ -17,11 +17,11 @@ pub struct Config {
     pub binding_ip: String,
     /// It stores the theming options for the website.
     pub style: Style,
-    #[cfg(feature = "redis-cache")]
+    /// It stores the cache backend type (memory or redis).
+    pub cache_backend: CacheBackend,
     /// It stores the redis connection url address on which the redis
     /// client should connect.
     pub redis_url: String,
-    #[cfg(any(feature = "redis-cache", feature = "memory-cache"))]
     /// It stores the max TTL for search results in cache.
     pub cache_expiry_time: u16,
     /// It stores the option to whether enable or disable production use.
@@ -55,6 +55,8 @@ pub struct Config {
     pub number_of_https_connections: u8,
     /// It stores the operating system's TLS certificates for https requests.
     pub operating_system_tls_certificates: bool,
+    /// Configuration for engine health management.
+    pub engine_health: EngineHealthConfig,
 }
 
 impl Config {
@@ -113,9 +115,7 @@ impl Config {
             1
         };
 
-        #[cfg(any(feature = "redis-cache", feature = "memory-cache"))]
-        let parsed_cet = globals.get("cache_expiry_time")?;
-        #[cfg(any(feature = "redis-cache", feature = "memory-cache"))]
+        let parsed_cet: u16 = globals.get("cache_expiry_time")?;
         let cache_expiry_time = if parsed_cet < 60 {
             log::error!("Config Error: The value of `cache_expiry_time` must be greater than 60");
             log::error!("Falling back to using the value `60` for the option");
@@ -124,6 +124,11 @@ impl Config {
             parsed_cet
         };
 
+        // Parse cache backend type
+        let cache_backend_str: String = globals.get("cache_backend").unwrap_or_else(|_| "memory".to_string());
+        let cache_backend = CacheBackend::from_str(&cache_backend_str);
+        log::info!("Using cache backend: {:?}", cache_backend);
+
         let proxy_opt: Option<String> = globals.get("proxy")?;
         let proxy = proxy_opt.and_then(|proxy_str| {
             Proxy::all(proxy_str).ok().and_then(|_| {
@@ -131,6 +136,13 @@ impl Config {
                 None
             })
         });
+
+        // Parse engine health configuration
+        let engine_health_config = parse_engine_health_config(&globals);
+
+        // Initialize the health manager with the parsed configuration
+        init_health_manager(engine_health_config.suspended_times.clone());
+        log::info!("Engine health management initialized (auto_suspend: {})", engine_health_config.enable_auto_suspend);
 
         Ok(Config {
             operating_system_tls_certificates: globals.get("operating_system_tls_certificates")?,
@@ -141,8 +153,9 @@ impl Config {
                 globals.get("colorscheme")?,
                 globals.get("animation")?,
             ),
-            #[cfg(feature = "redis-cache")]
-            redis_url: globals.get("redis_url")?,
+            cache_backend,
+            redis_url: globals.get("redis_url").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
+            cache_expiry_time,
             aggregator: AggregatorConfig {
                 random_delay: globals.get("production_use")?,
             },
@@ -161,10 +174,142 @@ impl Config {
                 time_limit: rate_limiter["time_limit"],
             },
             safe_search,
-            #[cfg(any(feature = "redis-cache", feature = "memory-cache"))]
-            cache_expiry_time,
             proxy,
+            engine_health: engine_health_config,
         })
+    }
+}
+
+/// Parse engine health configuration from Lua globals
+fn parse_engine_health_config(globals: &mlua::Table) -> EngineHealthConfig {
+    let default_config = EngineHealthConfig::default();
+
+    // Try to get engine_health table from config
+    let engine_health_table: Option<HashMap<String, mlua::Value>> = globals.get("engine_health").ok();
+
+    if engine_health_table.is_none() {
+        log::info!("No engine_health configuration found, using defaults");
+        return default_config;
+    }
+
+    let engine_health = engine_health_table.unwrap();
+
+    // Parse enable_auto_suspend
+    let enable_auto_suspend = engine_health
+        .get("enable_auto_suspend")
+        .and_then(|v| match v {
+            mlua::Value::Boolean(b) => Some(*b),
+            _ => None,
+        })
+        .unwrap_or(true);
+
+    // Parse ban times
+    let ban_time_on_fail = engine_health
+        .get("ban_time_on_fail")
+        .and_then(|v| match v {
+            mlua::Value::Integer(i) => Some(*i as u64),
+            mlua::Value::Number(n) => Some(*n as u64),
+            _ => None,
+        })
+        .unwrap_or(default_config.suspended_times.ban_time_on_fail);
+
+    let max_ban_time_on_fail = engine_health
+        .get("max_ban_time_on_fail")
+        .and_then(|v| match v {
+            mlua::Value::Integer(i) => Some(*i as u64),
+            mlua::Value::Number(n) => Some(*n as u64),
+            _ => None,
+        })
+        .unwrap_or(default_config.suspended_times.max_ban_time_on_fail);
+
+    // Parse suspended_times table
+    let suspended_times_table: Option<HashMap<String, mlua::Value>> = engine_health
+        .get("suspended_times")
+        .and_then(|v| match v {
+            mlua::Value::Table(t) => {
+                let mut map = HashMap::new();
+                for pair in t.clone().pairs::<String, mlua::Value>() {
+                    if let Ok((k, v)) = pair {
+                        map.insert(k, v);
+                    }
+                }
+                Some(map)
+            }
+            _ => None,
+        });
+
+    let mut suspended_times = SuspendedTimesConfig::default();
+    suspended_times.ban_time_on_fail = ban_time_on_fail;
+    suspended_times.max_ban_time_on_fail = max_ban_time_on_fail;
+
+    if let Some(times) = suspended_times_table {
+        suspended_times.access_denied = times
+            .get("access_denied")
+            .and_then(|v| match v {
+                mlua::Value::Integer(i) => Some(*i as u64),
+                mlua::Value::Number(n) => Some(*n as u64),
+                _ => None,
+            })
+            .unwrap_or(suspended_times.access_denied);
+
+        suspended_times.captcha = times
+            .get("captcha")
+            .and_then(|v| match v {
+                mlua::Value::Integer(i) => Some(*i as u64),
+                mlua::Value::Number(n) => Some(*n as u64),
+                _ => None,
+            })
+            .unwrap_or(suspended_times.captcha);
+
+        suspended_times.too_many_requests = times
+            .get("too_many_requests")
+            .and_then(|v| match v {
+                mlua::Value::Integer(i) => Some(*i as u64),
+                mlua::Value::Number(n) => Some(*n as u64),
+                _ => None,
+            })
+            .unwrap_or(suspended_times.too_many_requests);
+
+        suspended_times.timeout = times
+            .get("timeout")
+            .and_then(|v| match v {
+                mlua::Value::Integer(i) => Some(*i as u64),
+                mlua::Value::Number(n) => Some(*n as u64),
+                _ => None,
+            })
+            .unwrap_or(suspended_times.timeout);
+
+        suspended_times.ssl_error = times
+            .get("ssl_error")
+            .and_then(|v| match v {
+                mlua::Value::Integer(i) => Some(*i as u64),
+                mlua::Value::Number(n) => Some(*n as u64),
+                _ => None,
+            })
+            .unwrap_or(suspended_times.ssl_error);
+
+        suspended_times.http_error = times
+            .get("http_error")
+            .and_then(|v| match v {
+                mlua::Value::Integer(i) => Some(*i as u64),
+                mlua::Value::Number(n) => Some(*n as u64),
+                _ => None,
+            })
+            .unwrap_or(suspended_times.http_error);
+
+        suspended_times.parse_error = times
+            .get("parse_error")
+            .and_then(|v| match v {
+                mlua::Value::Integer(i) => Some(*i as u64),
+                mlua::Value::Number(n) => Some(*n as u64),
+                _ => None,
+            })
+            .unwrap_or(suspended_times.parse_error);
+    }
+
+    EngineHealthConfig {
+        suspended_times,
+        enable_auto_suspend,
     }
 }
 

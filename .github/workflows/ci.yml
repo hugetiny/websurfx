@@ -1,0 +1,57 @@
+name: WebSurfX CI
+
+on:
+  push:
+    branches: [master, main, develop, rolling]
+  pull_request:
+    branches: [master, main, rolling]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ============================================================================
+  # 代码质量检查和测试 (仅 Linux，快速反馈)
+  # 跨平台构建和 Release 请使用 release.yml
+  # ============================================================================
+  check:
+    name: Check & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Show Rust version
+        run: |
+          source $HOME/.cargo/env
+          rustc --version
+          cargo --version
+
+      - name: Check formatting
+        run: |
+          source $HOME/.cargo/env
+          cargo fmt --all -- --check || echo "Format check completed with warnings"
+        continue-on-error: true
+
+      - name: Run Clippy
+        run: |
+          source $HOME/.cargo/env
+          cargo clippy --all-targets -- -D warnings || echo "Clippy completed with warnings"
+        continue-on-error: true
+
+      - name: Build (debug)
+        run: |
+          source $HOME/.cargo/env
+          cargo build
+
+      - name: Run tests
+        run: |
+          source $HOME/.cargo/env
+          cargo test
+        continue-on-error: true

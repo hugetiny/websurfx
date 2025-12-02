@@ -2,6 +2,7 @@
 
 use crate::{
     aggregator::aggregate,
+    cache::SharedCache,
     handler::{FileType, file_path},
     models::{
         aggregation::SearchResults,
@@ -12,8 +13,7 @@ use crate::{
     user_agent::random_user_agent,
 };
 
-#[cfg(any(feature = "redis-cache", feature = "memory-cache"))]
-use {crate::cache::SharedCache, tokio::sync::OnceCell};
+use tokio::sync::OnceCell;
 
 use actix_web::{HttpRequest, HttpResponse, get, http::header::ContentType, web};
 use regex::Regex;
@@ -24,11 +24,9 @@ use tokio::{
     io::{AsyncBufReadExt, BufReader},
 };
 
-#[cfg(any(feature = "redis-cache", feature = "memory-cache"))]
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 /// A static constant for holding the cache struct.
-#[cfg(any(feature = "redis-cache", feature = "memory-cache"))]
 static SHARED_CACHE: OnceCell<SharedCache> = OnceCell::const_new();
 
 /// Handles the route of search page of the `websurfx` meta search engine website and it takes
@@ -65,7 +63,6 @@ pub async fn search(
     req: HttpRequest,
     config: web::Data<&'static Config>,
 ) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    #[cfg(any(feature = "redis-cache", feature = "memory-cache"))]
     let cache = SHARED_CACHE
         .get_or_try_init(|| SharedCache::new(&config))
         .await?;
@@ -122,7 +119,6 @@ pub async fn search(
 
         let current_results: SearchResults;
 
-        #[cfg(any(feature = "redis-cache", feature = "memory-cache"))]
         {
             let previous_page = page.saturating_sub(1);
 
@@ -201,11 +197,6 @@ pub async fn search(
                     async move { cache.cache_results(&fetched_results, &cache_keys).await },
                 );
             }
-        }
-
-        #[cfg(not(any(feature = "redis-cache", feature = "memory-cache")))]
-        {
-            current_results = results(&config, query, page, &search_settings, user_agent).await?;
         }
 
         // Return JSON response if format=json is requested (SearXNG compatibility)
@@ -327,7 +318,6 @@ async fn results(
 /// # Arguments
 ///
 /// * `url` - It takes an url as string.
-#[cfg(any(feature = "redis-cache", feature = "memory-cache"))]
 fn hash_url(url: String) -> String {
     blake3::hash(url.as_bytes()).to_string()
 }

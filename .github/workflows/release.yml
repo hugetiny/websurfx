@@ -1,72 +1,138 @@
-name: Bump release version
+name: WebSurfX Release
+
 on:
-  pull_request:
-    branches: [rolling]
-    types:
-      - closed
+  push:
+    tags:
+      - 'v*'
+      - 'websurfx-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+      run_tests:
+        description: 'Whether to run cargo tests before packaging (default: false)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
-  pull-requests: write
-  repository-projects: write
 
-concurrency: production
+env:
+  CARGO_TERM_COLOR: always
+  BINARY_NAME: websurfx
 
 jobs:
+  # ============================================================================
+  # 构建二进制
+  # ============================================================================
   build:
-    name: bump tag version and release  
-    if: github.event.pull_request.merged == true 
-    runs-on: ubuntu-latest
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            ext: ""
+          - name: windows-x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: ".exe"
+          - name: macos-x64
+            os: macos-latest
+            target: x86_64-apple-darwin
+            ext: ""
+          - name: macos-arm64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            ext: ""
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-      - name: Bump version and push tag
-        id: version-bump
-        uses: hennejg/github-tag-action@v4.4.0
-        with:
-          github_token: ${{ secrets.ADMIN_RIGHTS_TOKEN }}
-          release_branches: rolling
-      - name: create branch 
-        uses: peterjgrainger/action-create-branch@v3.0.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.ADMIN_RIGHTS_TOKEN }}
-        with:
-          branch: update-from-${{ github.sha }}
-      - name: update cargo.toml
+      - uses: actions/checkout@v4
+
+      - name: Run tests (optional)
+        if: ${{ github.event.inputs.run_tests == 'true' && matrix.name == 'linux-x64' }}
         run: |
-          appversion=$(echo "${{ steps.version-bump.outputs.new_tag }}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-          sed -i -e "s/^version = .*/version = \"$appversion\"/" Cargo.toml
-      - run: rustup toolchain install stable --profile minimal
-      - run: rustup update stable && rustup default stable
-      - name: regenerate cargo.lock
-        run: cargo generate-lockfile
-      - name: auto commit
-        uses: stefanzweifel/git-auto-commit-action@v5
+          echo "Running optional tests on linux-x64..."
+          cargo test --release
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
         with:
-          commit_message: "[skip ci] updating app version to ${{ steps.version-bump.outputs.new_tag }}"
-          branch: update-from-${{ github.sha }}
-      # create PR using GitHub CLI
-      - name: create PR with update info
-        id: create-pr
-        run: gh pr create --base rolling --head update-from-${{ github.sha }} --title 'Merge new update into rolling' --body 'Created by Github action'
-        env:
-          GH_TOKEN: ${{ secrets.ADMIN_RIGHTS_TOKEN }}
-      # merge PR using GitHub CLI
-      - name: merge PR with update info
-        id: merge-pr
-        run: gh pr merge --admin --merge --subject 'Merge update info' --delete-branch
-        env:
-          GH_TOKEN: ${{ secrets.ADMIN_RIGHTS_TOKEN }}
+          targets: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}${{ matrix.ext }} dist/
+          cp README.md LICENSE dist/ 2>/dev/null || true
+          cd dist && tar -czvf ../websurfx-${{ matrix.name }}.tar.gz *
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          Copy-Item "target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}${{ matrix.ext }}" -Destination dist/
+          Copy-Item README.md, LICENSE -Destination dist/ -ErrorAction SilentlyContinue
+          Compress-Archive -Path dist/* -DestinationPath "websurfx-${{ matrix.name }}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: websurfx-${{ matrix.name }}
+          path: websurfx-${{ matrix.name }}.*
+          retention-days: 7
+
+  # ============================================================================
+  # 创建 Release
+  # ============================================================================
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+            VERSION="${VERSION#v}"
+            VERSION="${VERSION#websurfx-v}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release/ \;
+          cd release && sha256sum * > SHA256SUMS.txt || true
+          ls -la
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ secrets.ADMIN_RIGHTS_TOKEN }}
+          name: WebSurfX v${{ steps.version.outputs.version }}
+          files: release/*
+          draft: false
           generate_release_notes: true
-          name: ${{ steps.version-bump.outputs.new_tag }}
-          tag_name: ${{ steps.version-bump.outputs.new_tag }}
-          prerelease: false
         env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

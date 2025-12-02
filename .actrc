@@ -1,0 +1,11 @@
+# Act 配置文件
+# 使用 Docker 运行 GitHub Actions
+
+# 默认使用中等大小的镜像 (推荐)
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+-P ubuntu-22.04=catthehacker/ubuntu:act-22.04
+-P ubuntu-20.04=catthehacker/ubuntu:act-20.04
+
+# 禁用不必要的功能以加快速度
+--env ACTIONS_RUNTIME_TOKEN=
+--env ACTIONS_CACHE_URL=

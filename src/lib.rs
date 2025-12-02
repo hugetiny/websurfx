@@ -2,8 +2,8 @@
 //! and register all the routes for the `websurfx` meta search engine website.
 
 mod aggregator;
-#[cfg(any(feature = "redis-cache", feature = "memory-cache"))]
 mod cache;
+pub mod engine_checker;
 mod engines;
 mod handler;
 mod models;
@@ -66,7 +66,7 @@ pub async fn run(listener: TcpListener, config: &'static Config) -> tokio::io::R
     let server = HttpServer::new(move || {
         let cors: Cors = Cors::default()
             .allow_any_origin()
-            .allowed_methods(vec!["GET"])
+            .allowed_methods(vec!["GET", "POST"])
             .allowed_headers(vec![
                 header::ORIGIN,
                 header::CONTENT_TYPE,
@@ -102,6 +102,64 @@ pub async fn run(listener: TcpListener, config: &'static Config) -> tokio::io::R
             .service(routes::about) // about page
             .service(routes::settings) // settings page
             .service(routes::export_import::download) // download page
+            // Stats API routes
+            .service(routes::stats::get_all_stats)
+            .service(routes::stats::get_engine_stats)
+            .service(routes::stats::get_suspended_engines)
+            .service(routes::stats::resume_engine)
+            .service(routes::stats::reset_stats)
+            .service(routes::stats::resume_all_engines)
+            // Checker API routes
+            .service(routes::checker::get_checker_status)
+            .service(routes::checker::get_engine_check_status)
+            .service(routes::checker::check_single_engine)
+            .service(routes::checker::check_multiple_engines)
+            .service(routes::checker::get_healthy_engines)
+            .service(routes::checker::get_unhealthy_engines)
+            .service(routes::checker::reset_engine_check_status)
+            .service(routes::checker::reset_all_check_statuses)
+            // Categories API routes
+            .service(routes::categories::list_categories)
+            .service(routes::categories::list_engines)
+            .service(routes::categories::list_default_engines)
+            .service(routes::categories::parse_bang_query)
+            .service(routes::categories::list_bangs)
+            .service(routes::categories::get_category)
+            .service(routes::categories::get_engine)
+            .service(routes::categories::list_engines_by_region)
+            // Health API routes
+            .service(routes::health::health)
+            .service(routes::health::reset_engine)
+            .service(routes::health::reset_all)
+            // SearXNG-compatible API routes (v1)
+            .service(routes::searxng_api::search_get)
+            .service(routes::searxng_api::search_post)
+            .service(routes::searxng_api::get_config)
+            .service(routes::searxng_api::list_categories_v1)
+            .service(routes::searxng_api::list_engines_v1)
+            .service(routes::searxng_api::autocomplete)
+            .service(routes::searxng_api::get_preferences)
+            .service(routes::searxng_api::get_languages)
+            .service(routes::searxng_api::get_regions)
+            .service(routes::searxng_api::get_time_ranges)
+            .service(routes::searxng_api::get_safesearch_options)
+            .service(routes::searxng_api::get_formats)
+            .service(routes::searxng_api::get_plugins)
+            .service(routes::searxng_api::get_engine_stats)
+            .service(routes::searxng_api::toggle_engine)
+            .service(routes::searxng_api::get_shortcuts)
+            .service(routes::searxng_api::get_info)
+            // OpenSearch routes
+            .service(routes::opensearch::opensearch_xml)
+            .service(routes::opensearch::autocomplete)
+            .service(routes::opensearch::autocomplete_google)
+            .service(routes::opensearch::autocomplete_wikipedia)
+            .service(routes::opensearch::autocomplete_startpage)
+            // Proxy routes
+            .service(routes::proxy::image_proxy)
+            .service(routes::proxy::morty_proxy)
+            .service(routes::proxy::redirect_url)
+            .service(routes::proxy::favicon_proxy)
             .default_service(web::route().to(routes::not_found)) // error page
     })
     .workers(config.threads as usize)

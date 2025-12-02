@@ -48,7 +48,7 @@ redis = { version = "0.32.5", features = [
     "tokio-comp",
     "connection-manager",
     "tcp_nodelay"
-], default-features = false, optional = true }
+], default-features = false }
 blake3 = { version = "1.8.2", default-features = false }
 error-stack = { version = "0.5.0", default-features = false, features = [
     "std",
@@ -59,7 +59,7 @@ futures = { version = "0.3.31", default-features = false, features = ["alloc"] }
 dhat = { version = "0.3.2", optional = true, default-features = false }
 mimalloc = { version = "0.1.43", default-features = false }
 actix-governor = { version = "0.8.0", default-features = false }
-moka = { version = "0.12.8", optional = true, default-features = false, features = [
+moka = { version = "0.12.8", default-features = false, features = [
     "future",
 ] }
 async-compression = { version = "0.4.27", default-features = false, features = [
@@ -73,7 +73,9 @@ chacha20poly1305 = { version = "0.10.1", default-features = false, features = [
 chacha20 = { version = "0.9.1", default-features = false, optional = true }
 base64 = { version = "0.22.1", default-features = false, features = [
     "std",
-], optional = true }
+] }
+urlencoding = { version = "2.1.3", default-features = false }
+html-escape = { version = "0.2.13", default-features = false }
 cfg-if = { version = "1.0.0", default-features = false, optional = true }
 keyword_extraction = { version = "1.5.0", default-features = false, features = [
     "tf_idf",
@@ -99,7 +101,7 @@ lightningcss = { version = "1.0.0-alpha.57", default-features = false, features 
 ] }
 minify-js = { version = "0.6.0", default-features = false }
 # Temporary fork with fix
-# minify-js = { git = "https://github.com/RuairidhWilliamson/minify-js", branch = "master", version = "0.6.0", default-features = false} 
+# minify-js = { git = "https://github.com/RuairidhWilliamson/minify-js", branch = "master", version = "0.6.0", default-features = false}
 
 [lints.rust]
 unsafe_code = "forbid"
@@ -186,11 +188,9 @@ inherits = "lpcb1"
 opt-level = "z"
 
 [features]
-default = ["memory-cache"]
+default = []
 use-synonyms-search = ["thesaurus/static"]
 dhat-heap = ["dep:dhat"]
-memory-cache = ["dep:moka"]
-redis-cache = ["dep:redis", "dep:base64"]
 compress-cache-results = ["dep:async-compression", "dep:cfg-if"]
 encrypt-cache-results = ["dep:chacha20poly1305", "dep:chacha20"]
 cec-cache-results = ["compress-cache-results", "encrypt-cache-results"]
