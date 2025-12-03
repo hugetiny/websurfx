@@ -3,6 +3,7 @@
 
 mod aggregator;
 mod cache;
+pub mod config_manager;
 pub mod engine_checker;
 mod engines;
 mod handler;
@@ -160,6 +161,18 @@ pub async fn run(listener: TcpListener, config: &'static Config) -> tokio::io::R
             .service(routes::proxy::morty_proxy)
             .service(routes::proxy::redirect_url)
             .service(routes::proxy::favicon_proxy)
+            // Auto-config API routes (automatic engine enable/disable based on test results)
+            .service(routes::autoconfig::get_status)
+            .service(routes::autoconfig::get_settings)
+            .service(routes::autoconfig::update_settings)
+            .service(routes::autoconfig::run_config)
+            .service(routes::autoconfig::get_enabled)
+            .service(routes::autoconfig::get_disabled)
+            .service(routes::autoconfig::enable_engine)
+            .service(routes::autoconfig::disable_engine)
+            .service(routes::autoconfig::get_lua_config)
+            .service(routes::autoconfig::save_config)
+            .service(routes::autoconfig::load_config)
             .default_service(web::route().to(routes::not_found)) // error page
     })
     .workers(config.threads as usize)

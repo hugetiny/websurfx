@@ -9,6 +9,7 @@ use crate::{
 use actix_web::{HttpRequest, HttpResponse, get, http::header::ContentType, web};
 use tokio::fs::read_to_string;
 
+pub mod autoconfig;
 pub mod categories;
 pub mod checker;
 pub mod export_import;
