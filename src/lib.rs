@@ -3,10 +3,12 @@
 
 mod aggregator;
 mod cache;
+pub mod checker_scheduler;
 pub mod config_manager;
 pub mod engine_checker;
 mod engines;
 mod handler;
+pub mod metrics;
 pub mod models;
 pub mod parser;
 mod routes;
@@ -103,13 +105,20 @@ pub async fn run(listener: TcpListener, config: &'static Config) -> tokio::io::R
             .service(routes::about) // about page
             .service(routes::settings) // settings page
             .service(routes::export_import::download) // download page
-            // Stats API routes
+            // Stats API routes (legacy + SearXNG-compatible)
             .service(routes::stats::get_all_stats)
             .service(routes::stats::get_engine_stats)
             .service(routes::stats::get_suspended_engines)
             .service(routes::stats::resume_engine)
             .service(routes::stats::reset_stats)
             .service(routes::stats::resume_all_engines)
+            // SearXNG-compatible metrics routes
+            .service(routes::stats::get_reliabilities)
+            .service(routes::stats::get_openmetrics)
+            .service(routes::stats::get_checker_status)
+            .service(routes::stats::run_checker)
+            .service(routes::stats::update_checker_config)
+            .service(routes::stats::get_checker_config)
             // Checker API routes
             .service(routes::checker::get_checker_status)
             .service(routes::checker::get_engine_check_status)
