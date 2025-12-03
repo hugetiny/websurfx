@@ -9,6 +9,8 @@
 //! Additional categories:
 //!   onions (Tor hidden services), other (miscellaneous)
 
+#![allow(missing_docs)]
+
 #![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
@@ -2607,10 +2609,15 @@ pub enum BangResult {
 /// Category information for API response
 #[derive(Debug, Clone, Serialize)]
 pub struct CategoryInfo {
+    /// Category identifier
     pub id: String,
+    /// Display name for the category
     pub name: String,
+    /// Bang command for the category
     pub bang: String,
+    /// Number of engines in this category
     pub engine_count: usize,
+    /// List of engine names in this category
     pub engines: Vec<String>,
 }
 

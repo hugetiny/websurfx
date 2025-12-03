@@ -6,7 +6,7 @@ mod cache;
 pub mod engine_checker;
 mod engines;
 mod handler;
-mod models;
+pub mod models;
 pub mod parser;
 mod routes;
 pub mod templates;

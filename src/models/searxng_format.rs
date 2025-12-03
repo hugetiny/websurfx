@@ -143,8 +143,11 @@ pub struct SearxngInfobox {
 /// Infobox URL
 #[derive(Debug, Clone, Serialize)]
 pub struct SearxngInfoboxUrl {
+    /// Title of the URL
     pub title: String,
+    /// The URL itself
     pub url: String,
+    /// Whether this is an official URL
     #[serde(skip_serializing_if = "Option::is_none")]
     pub official: Option<bool>,
 }
@@ -152,8 +155,11 @@ pub struct SearxngInfoboxUrl {
 /// Infobox attribute
 #[derive(Debug, Clone, Serialize)]
 pub struct SearxngInfoboxAttribute {
+    /// Label/name of the attribute
     pub label: String,
+    /// Value of the attribute
     pub value: String,
+    /// Entity type if applicable
     #[serde(skip_serializing_if = "Option::is_none")]
     pub entity: Option<String>,
 }
@@ -161,7 +167,9 @@ pub struct SearxngInfoboxAttribute {
 /// Related topic
 #[derive(Debug, Clone, Serialize)]
 pub struct SearxngRelatedTopic {
+    /// Name of the related topic
     pub name: String,
+    /// URL to the related topic
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
 }
@@ -169,10 +177,14 @@ pub struct SearxngRelatedTopic {
 /// Unresponsive engine info
 #[derive(Debug, Clone, Serialize)]
 pub struct SearxngUnresponsiveEngine {
+    /// Engine name
     pub engine: String,
+    /// Type of error that occurred
     pub error_type: String,
+    /// Error message details
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+    /// Whether the engine is currently suspended
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suspended: Option<bool>,
 }
@@ -180,8 +192,11 @@ pub struct SearxngUnresponsiveEngine {
 /// Timing information for each engine
 #[derive(Debug, Clone, Serialize)]
 pub struct SearxngEngineTiming {
+    /// Engine name
     pub engine: String,
+    /// Time taken in seconds
     pub time: f64,
+    /// Number of results from this engine
     pub count: u32,
 }
 
@@ -391,8 +406,11 @@ pub fn convert_infobox_to_searxng(infobox: &InternalInfobox) -> SearxngInfobox {
 /// Export format types supported by SearXNG
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExportFormat {
+    /// JSON format
     Json,
+    /// CSV format
     Csv,
+    /// RSS format
     Rss,
 }
 

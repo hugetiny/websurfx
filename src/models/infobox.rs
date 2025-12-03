@@ -39,23 +39,31 @@ pub struct Infobox {
 /// URL entry in an infobox
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InfoboxUrl {
+    /// Title/label for the URL
     pub title: String,
+    /// The URL itself
     pub url: String,
+    /// Whether this is an official URL
     pub official: bool,
 }
 
 /// Attribute entry in an infobox
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InfoboxAttribute {
+    /// Label/name of the attribute
     pub label: String,
+    /// Value of the attribute
     pub value: String,
+    /// Entity type if applicable
     pub entity: Option<String>,
 }
 
 /// Related topic in an infobox
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RelatedTopic {
+    /// Name of the related topic
     pub name: String,
+    /// URL to the related topic
     pub url: Option<String>,
 }
 
@@ -116,21 +124,27 @@ impl Infobox {
 /// Suggestion for alternative search queries
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Suggestion {
+    /// The suggested search query
     pub suggestion: String,
+    /// URL for the suggested search
     pub url: Option<String>,
 }
 
 /// Correction for misspelled queries
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Correction {
+    /// The corrected search query
     pub correction: String,
+    /// URL for the corrected search
     pub url: Option<String>,
 }
 
 /// Answer box for direct answers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Answer {
+    /// The direct answer text
     pub answer: String,
+    /// URL for more information
     pub url: Option<String>,
 }
 

@@ -68,7 +68,7 @@ pub async fn search(
         .await?;
 
     let params = web::Query::<SearchParams>::from_query(req.query_string())?;
-    
+
     // Check if JSON format is requested
     let format_is_json = req.query_string().contains("format=json");
 

@@ -157,6 +157,7 @@ pub struct ErrorRecord {
 }
 
 impl ErrorRecord {
+    /// Create a new error record
     pub fn new(error_type: EngineErrorType, message: Option<String>) -> Self {
         Self {
             error_type,
@@ -267,6 +268,7 @@ pub struct EngineMetrics {
 }
 
 impl EngineMetrics {
+    /// Create a new engine metrics instance
     pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
