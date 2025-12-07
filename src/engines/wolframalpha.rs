@@ -51,6 +51,7 @@ impl SearchEngine for WolframAlpha {
                 description: "Computational knowledge engine - click to see detailed results".to_string(),
                 engine: vec!["wolframalpha".to_string()],
                 relevance_score: 0.0,
+                ..Default::default()
             },
         )];
 

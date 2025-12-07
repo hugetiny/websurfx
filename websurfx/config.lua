@@ -94,58 +94,51 @@ engine_health = {
 }
 
 -- ### Search Engines ###
+-- ===== Auto-configured based on live test results =====
+-- Test date: 2025-12-03
+-- Passed: 12 engines, Failed: 8 engines
 upstream_search_engines = {
-	-- General Search Engines
-	DuckDuckGo = true,
+	-- ✅ Enabled engines (passed connectivity test, sorted by response time)
+	Search360 = true,    -- 84ms - 360 Search (fastest!)
+	Baidu = true,        -- 142ms - Largest Chinese search engine
+	Bing = true,         -- 413ms - Microsoft search
+	Sogou = true,        -- 502ms - Major Chinese search engine
+	Unsplash = true,     -- 736ms - Free photos
+	HackerNews = true,   -- 749ms - Tech news and discussions
+	GitHub = true,       -- 808ms - Code repositories
+	Mojeek = true,       -- 1665ms - Privacy-focused UK search engine
+	npm = true,          -- 1754ms - Node.js packages
+	StackExchange = true, -- 1998ms - Q&A for developers
+	arXiv = true,        -- 3894ms - Scientific papers
+	Crates = true,       -- 8287ms - Rust packages (crates.io)
+
+	-- ❌ Disabled engines (failed connectivity test)
+	DuckDuckGo = false,  -- Timeout (15s)
+	Brave = false,       -- Connection failed
+	Startpage = false,   -- Timeout (15s)
+	Google = false,      -- Timeout (15s) - May require anti-bot measures
+	Qwant = false,       -- Connection failed
+	Wikipedia = false,   -- Timeout (15s)
+	PyPI = false,        -- Timeout (15s)
+	IMDb = false,        -- Minimal response
+
+	-- ⏸️ Not tested (kept previous state)
 	Searx = false,
-	Brave = false,
-	Startpage = false,
 	LibreX = false,
-	Mojeek = false,
-	Bing = false,
 	Yahoo = false,
-	Google = false,      -- May require anti-bot measures
-	Qwant = false,       -- Privacy-focused French search engine
 	Yandex = false,      -- Russian search engine
 	Ask = false,         -- Ask.com
-
-	-- Chinese Search Engines
-	Baidu = true,        -- Largest Chinese search engine
-	Sogou = false,       -- Major Chinese search engine
-	Search360 = false,   -- 360 Search (Qihoo)
 	Chinaso = false,     -- Chinese national search engine
-
-	-- Asian Search Engines
 	Naver = false,       -- South Korean search engine
-
-	-- Reference
-	Wikipedia = true,
 	Wikidata = false,    -- Structured knowledge base
 	OpenLibrary = false, -- Free book library
-
-	-- Developer Tools
-	GitHub = false,      -- Code repositories
-	StackExchange = false, -- Q&A for developers
-	npm = false,         -- Node.js packages
-	PyPI = false,        -- Python packages
-	Crates = false,      -- Rust packages (crates.io)
 	DockerHub = false,   -- Docker images
 	HuggingFace = false, -- AI/ML models
-
-	-- Academic
-	arXiv = false,       -- Scientific papers
 	PubMed = false,      -- Medical literature
-
-	-- Social/Community
-	HackerNews = false,  -- Tech news and discussions
 	Reddit = false,      -- Community discussions
-
-	-- Media
 	YouTube = false,     -- Video platform (via Invidious)
 	Bilibili = false,    -- Chinese video platform
 	SoundCloud = false,  -- Music streaming
-	IMDb = false,        -- Movie database
-	Unsplash = false,    -- Free photos
 } -- select the upstream search engines from which the results should be fetched.
 
 proxy = nil -- Proxy to send outgoing requests through. Set to nil to disable.

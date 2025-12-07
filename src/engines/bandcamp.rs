@@ -77,6 +77,7 @@ impl SearchEngine for Bandcamp {
                             description: artist,
                             engine: vec!["bandcamp".to_string()],
                             relevance_score: 0.0,
+                            ..Default::default()
                         },
                     ));
                 }

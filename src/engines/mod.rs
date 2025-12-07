@@ -6,6 +6,7 @@
 // General search engines
 pub mod baidu;
 pub mod bing;
+pub mod bing_news;
 pub mod brave;
 pub mod duckduckgo;
 pub mod google;

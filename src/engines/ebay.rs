@@ -81,6 +81,7 @@ impl SearchEngine for Ebay {
                             description: format!("Price: {}", price),
                             engine: vec!["ebay".to_string()],
                             relevance_score: 0.0,
+                            ..Default::default()
                         },
                     ));
                 }

@@ -1,5 +1,5 @@
 //! This module provides the engine statistics and health API routes.
-//! 
+//!
 //! SearXNG-compatible endpoints:
 //! - /api/stats - Engine statistics with P50/P80/P95 response times
 //! - /api/reliabilities - Engine reliability information
@@ -78,7 +78,7 @@ pub struct StatsQuery {
 /// Get statistics for all engines
 ///
 /// GET /api/stats
-/// 
+///
 /// Query params:
 /// - format=searxng: Return SearXNG-compatible format with P50/P80/P95
 /// - engine=name: Get stats for specific engine only
@@ -87,7 +87,7 @@ pub async fn get_all_stats(query: web::Query<StatsQuery>) -> HttpResponse {
     // Check if SearXNG format is requested
     if query.format.as_deref() == Some("searxng") {
         let metrics = get_metrics();
-        
+
         let engine_names: Vec<String> = if let Some(ref engine) = query.engine {
             vec![engine.clone()]
         } else {
@@ -95,11 +95,11 @@ pub async fn get_all_stats(query: web::Query<StatsQuery>) -> HttpResponse {
         };
 
         let stats = metrics.get_all_stats(&engine_names);
-        
+
         let max_time = stats.iter()
             .filter_map(|s| s.total)
             .fold(0.0_f64, |max, t| max.max(t));
-        
+
         let max_result_count = stats.iter()
             .filter_map(|s| s.result_count)
             .fold(0.0_f64, |max, r| max.max(r));
@@ -131,12 +131,12 @@ pub async fn get_all_stats(query: web::Query<StatsQuery>) -> HttpResponse {
 #[get("/api/stats/{engine_name}")]
 pub async fn get_engine_stats(path: web::Path<String>) -> HttpResponse {
     let engine_name = path.into_inner();
-    
+
     // Try new metrics system first
     let metrics = get_metrics();
     let stats = metrics.get_all_stats(&[engine_name.clone()]);
     let reliabilities = metrics.get_reliabilities(&[engine_name.clone()]);
-    
+
     if !stats.is_empty() {
         let stat = &stats[0];
         let reliability = reliabilities.get(&engine_name);
@@ -231,7 +231,7 @@ pub async fn reset_stats() -> HttpResponse {
     // Reset both old and new metrics
     let health_manager = get_health_manager();
     health_manager.reset_stats();
-    
+
     let metrics = get_metrics();
     metrics.reset();
 
@@ -273,10 +273,10 @@ pub async fn resume_all_engines() -> HttpResponse {
 pub async fn get_reliabilities() -> HttpResponse {
     let metrics = get_metrics();
     let scheduler = get_scheduler();
-    
+
     // Get reliabilities from metrics
     let mut reliabilities = metrics.get_reliabilities(&[]);
-    
+
     // Merge with checker results
     let checker_reliabilities = scheduler.get_engine_reliabilities().await;
     for (name, info) in checker_reliabilities {
@@ -296,12 +296,12 @@ pub async fn get_reliabilities() -> HttpResponse {
 #[get("/api/metrics")]
 pub async fn get_openmetrics() -> HttpResponse {
     let metrics = get_metrics();
-    
+
     let stats = metrics.get_all_stats(&[]);
     let reliabilities = metrics.get_reliabilities(&[]);
-    
+
     let output = openmetrics(&stats, &reliabilities);
-    
+
     HttpResponse::Ok()
         .content_type("text/plain; version=0.0.4; charset=utf-8")
         .body(output)
@@ -332,7 +332,7 @@ pub async fn get_checker_status() -> HttpResponse {
 #[post("/api/checker/run")]
 pub async fn run_checker() -> HttpResponse {
     let result = run_manual_check().await;
-    
+
     match result {
         CheckerResult::Running => {
             HttpResponse::Conflict()
@@ -345,12 +345,12 @@ pub async fn run_checker() -> HttpResponse {
         CheckerResult::Ok { engines, timestamp } => {
             let passed = engines.values().filter(|e| e.success).count();
             let failed = engines.len() - passed;
-            
+
             HttpResponse::Ok()
                 .content_type(ContentType::json())
                 .json(serde_json::json!({
                     "success": true,
-                    "message": format!("Checked {} engines: {} passed, {} failed", 
+                    "message": format!("Checked {} engines: {} passed, {} failed",
                         engines.len(), passed, failed),
                     "engines": engines,
                     "timestamp": timestamp,

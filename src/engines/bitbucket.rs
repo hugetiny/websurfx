@@ -92,6 +92,7 @@ impl SearchEngine for Bitbucket {
                             description,
                             engine: vec!["bitbucket".to_string()],
                             relevance_score: 0.0,
+                            ..Default::default()
                         },
                     ));
                 }

@@ -41,6 +41,7 @@ impl SearchEngine for Twitter {
                 description: "Search on Twitter/X via Nitter".to_string(),
                 engine: vec!["twitter".to_string()],
                 relevance_score: 0.0,
+                ..Default::default()
             },
         )];
 

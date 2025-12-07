@@ -90,6 +90,7 @@ impl SearchEngine for Wikispecies {
                                 description: snippet_clean,
                                 engine: vec!["wikispecies".to_string()],
                                 relevance_score: 0.0,
+                                ..Default::default()
                             },
                         ));
                     }

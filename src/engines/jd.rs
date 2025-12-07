@@ -55,6 +55,7 @@ impl SearchEngine for Jd {
                 description: "点击在京东上搜索商品".to_string(),
                 engine: vec!["jd".to_string()],
                 relevance_score: 0.0,
+                ..Default::default()
             },
         )];
 

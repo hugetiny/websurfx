@@ -67,6 +67,7 @@ impl SearchEngine for RottenTomatoes {
                             description: "Search movies and TV shows on Rotten Tomatoes".to_string(),
                             engine: vec!["rottentomatoes".to_string()],
                             relevance_score: 0.0,
+                            ..Default::default()
                         },
                     ));
                 }
@@ -82,6 +83,7 @@ impl SearchEngine for RottenTomatoes {
                     description: "Search movies and TV shows on Rotten Tomatoes".to_string(),
                     engine: vec!["rottentomatoes".to_string()],
                     relevance_score: 0.0,
+                    ..Default::default()
                 },
             ));
         }

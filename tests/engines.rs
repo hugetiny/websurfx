@@ -66,18 +66,18 @@ macro_rules! test_engine_search {
                     return;
                 }
             };
-            
+
             let (name, engine) = handler.into_name_engine();
             println!("Testing engine: {} with query: '{}'", name, $query);
-            
+
             let result = engine.results($query, 1, TEST_USER_AGENT, &client, 0).await;
-            
+
             match result {
                 Ok(results) => {
                     println!("Engine '{}' returned {} results", name, results.len());
                     // Verify results are not empty (if we got Ok)
                     assert!(!results.is_empty(), "Engine '{}' returned empty results", name);
-                    
+
                     // Verify each result has required fields
                     for (url, search_result) in &results {
                         assert!(!url.is_empty(), "Result URL should not be empty");
@@ -457,7 +457,7 @@ mod pagination {
 
         // Test page 1
         let page1 = engine.results("rust", 1, TEST_USER_AGENT, &client, 0).await;
-        
+
         // Test page 2
         let page2 = engine.results("rust", 2, TEST_USER_AGENT, &client, 0).await;
 
@@ -586,7 +586,7 @@ mod concurrent {
     #[tokio::test]
     async fn test_concurrent_searches() {
         let client = create_test_client();
-        
+
         let engines = vec!["wikipedia", "github", "arxiv"];
         let mut handles = Vec::new();
 

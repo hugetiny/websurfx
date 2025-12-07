@@ -55,6 +55,7 @@ impl SearchEngine for Taobao {
                 description: "点击在淘宝上搜索商品".to_string(),
                 engine: vec!["taobao".to_string()],
                 relevance_score: 0.0,
+                ..Default::default()
             },
         )];
 

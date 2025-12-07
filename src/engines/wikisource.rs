@@ -90,6 +90,7 @@ impl SearchEngine for Wikisource {
                                 description: snippet_clean,
                                 engine: vec!["wikisource".to_string()],
                                 relevance_score: 0.0,
+                                ..Default::default()
                             },
                         ));
                     }

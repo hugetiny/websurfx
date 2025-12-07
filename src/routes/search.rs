@@ -99,6 +99,15 @@ pub async fn search(
                 )
             });
 
+        // Override engines if specified in URL parameters (for SearXNG API compatibility)
+        if let Some(engines_param) = &params.engines {
+            let engines: Vec<Cow<'_, str>> = engines_param
+                .split(',')
+                .map(|s| Cow::Owned(s.trim().to_string()))
+                .collect();
+            search_settings.engines = Cow::Owned(engines);
+        }
+
         search_settings.safe_search_level = get_safesearch_level(
             params.safesearch,
             search_settings.safe_search_level,
@@ -114,8 +123,9 @@ pub async fn search(
 
         let user_agent: &str = random_user_agent(config.threads).await?;
 
+        // Support both 'page' and 'pageno' for SearXNG compatibility
         // .max(1) makes sure that the page >= 0.
-        let page = params.page.unwrap_or(1).max(1) - 1;
+        let page = params.page.or(params.pageno).unwrap_or(1).max(1) - 1;
 
         let current_results: SearchResults;
 

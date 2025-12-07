@@ -88,6 +88,7 @@ impl SearchEngine for GoogleScholar {
                             description: format!("{} - {}", info, description),
                             engine: vec!["googlescholar".to_string()],
                             relevance_score: 0.0,
+                            ..Default::default()
                         },
                     ));
                 }

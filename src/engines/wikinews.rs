@@ -90,6 +90,7 @@ impl SearchEngine for Wikinews {
                                 description: snippet_clean,
                                 engine: vec!["wikinews".to_string()],
                                 relevance_score: 0.0,
+                                ..Default::default()
                             },
                         ));
                     }

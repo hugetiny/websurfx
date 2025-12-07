@@ -161,7 +161,7 @@ impl EngineMetricsData {
     }
 
     /// Calculate reliability percentage (0-100)
-    /// 
+    ///
     /// SearXNG formula:
     /// - If checker fails on 'simple' test: 0%
     /// - If no requests sent: None
@@ -562,7 +562,7 @@ mod tests {
     #[test]
     fn test_histogram() {
         let mut h = Histogram::new();
-        
+
         // Add some values
         for _ in 0..10 {
             h.observe(0.5); // 500ms
@@ -579,7 +579,7 @@ mod tests {
     #[test]
     fn test_engine_metrics() {
         let mut metrics = EngineMetricsData::new();
-        
+
         metrics.counters.sent = 100;
         metrics.counters.successful = 90;
         metrics.counters.errors = 10;
@@ -592,7 +592,7 @@ mod tests {
     #[test]
     fn test_reliability_with_checker_failure() {
         let mut metrics = EngineMetricsData::new();
-        
+
         metrics.counters.sent = 100;
         metrics.counters.successful = 90;
         metrics.checker_passed = false;
@@ -605,7 +605,7 @@ mod tests {
     #[test]
     fn test_metrics_storage() {
         let storage = MetricsStorage::new(true);
-        
+
         storage.record_sent("test_engine");
         storage.record_success("test_engine", 0.5, 0.3, 10, 5.0);
         storage.record_sent("test_engine");

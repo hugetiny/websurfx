@@ -330,6 +330,7 @@ mod tests {
                     .to_owned(),
                 relevance_score: 0.0,
                 engine: vec!["Google".to_owned(), "Bing".to_owned()],
+                ..Default::default()
             },
         ));
         map_to_be_filtered.push((
@@ -339,7 +340,8 @@ mod tests {
                 url: "https://www.rust-lang.org/".to_owned(),
                 description: "A systems programming language that runs blazingly fast, prevents segfaults, and guarantees thread safety.".to_owned(),
                 engine: vec!["Google".to_owned(), "DuckDuckGo".to_owned()],
-                relevance_score:0.0
+                relevance_score: 0.0,
+                ..Default::default()
             },)
         );
 
@@ -385,6 +387,7 @@ mod tests {
                     .to_owned(),
                 engine: vec!["Google".to_owned(), "Bing".to_owned()],
                 relevance_score: 0.0,
+                ..Default::default()
             },
         ));
         map_to_be_filtered.push((
@@ -394,7 +397,8 @@ mod tests {
                 url: "https://www.rust-lang.org/".to_owned(),
                 description: "A systems programming language that runs blazingly fast, prevents segfaults, and guarantees thread safety.".to_owned(),
                 engine: vec!["Google".to_owned(), "DuckDuckGo".to_owned()],
-                relevance_score:0.0
+                relevance_score: 0.0,
+                ..Default::default()
             },
         ));
 
@@ -456,6 +460,7 @@ mod tests {
                     .to_owned(),
                 engine: vec!["Google".to_owned(), "Bing".to_owned()],
                 relevance_score: 0.0,
+                ..Default::default()
             },
         ));
 

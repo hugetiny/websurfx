@@ -14,7 +14,9 @@ use {arc_swap::ArcSwap, rayon::iter::ParallelExtend, std::sync::Arc, thesaurus::
 /// A named struct to store the raw scraped search results scraped search results from the
 /// upstream search engines before aggregating it.It derives the Clone trait which is needed
 /// to write idiomatic rust using `Iterators`.
-#[derive(Clone, Serialize, Deserialize)]
+///
+/// This struct is designed to be fully compatible with SearXNG's result format.
+#[derive(Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchResult {
     /// The title of the search result.
@@ -28,10 +30,179 @@ pub struct SearchResult {
     /// The td-tdf score of the result in regards to the title, url and description and the
     /// user's query
     pub relevance_score: f32,
+
+    // ============================================================================
+    // SearXNG-compatible fields below
+    // ============================================================================
+
+    /// Thumbnail URL for the result (used in news, images, videos)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumbnail: Option<String>,
+
+    /// Full-size image URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub img_src: Option<String>,
+
+    /// Thumbnail source URL (alternative to thumbnail)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumbnail_src: Option<String>,
+
+    /// Image format (e.g., "jpg", "png", "gif")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub img_format: Option<String>,
+
+    /// Published date as ISO 8601 string
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub published_date: Option<String>,
+
+    /// Author of the content
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+
+    /// Source website/domain name
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+
+    /// Iframe source URL (for embedded content)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub iframe_src: Option<String>,
+
+    /// Audio source URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub audio_src: Option<String>,
+
+    /// Video duration/length in seconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub length: Option<u64>,
+
+    /// View count (for videos, articles)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub views: Option<String>,
+
+    /// Metadata string (miscellaneous info)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<String>,
+
+    /// Template name for special result types
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub template: Option<String>,
+
+    /// Category of the result (general, images, videos, news, etc.)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+
+    /// Magnet link (for torrent results)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub magnetlink: Option<String>,
+
+    /// Torrent file URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub torrentfile: Option<String>,
+
+    /// Seed count (for torrents)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub seed: Option<u32>,
+
+    /// Leech count (for torrents)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub leech: Option<u32>,
+
+    /// File size in bytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filesize: Option<u64>,
+
+    /// File size as human-readable string
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filesize_human: Option<String>,
+
+    /// DOI (for academic papers)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doi: Option<String>,
+
+    /// Whether the paper is open access
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub open_access: Option<bool>,
+
+    /// Comments URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comments: Option<String>,
+
+    /// ISBN (for books)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub isbn: Option<String>,
+
+    /// Publisher name
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub publisher: Option<String>,
+
+    /// Journal name (for academic results)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub journal: Option<String>,
+
+    /// Price (for shopping results)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub price: Option<String>,
+
+    /// Currency code
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
+
+    /// Shipping info
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipping: Option<String>,
+
+    /// Latitude (for map results)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub latitude: Option<f64>,
+
+    /// Longitude (for map results)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub longitude: Option<f64>,
+
+    /// Address (for map/location results)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<String>,
+
+    /// Phone number
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<String>,
+
+    /// Rating (e.g., "4.5/5")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rating: Option<String>,
+
+    /// Number of reviews
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reviews: Option<u32>,
+
+    /// Programming language (for code results)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code_language: Option<String>,
+
+    /// Code snippet
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+
+    /// Package version (for package managers)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+
+    /// Download count
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub downloads: Option<String>,
+
+    /// License type
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub license: Option<String>,
+
+    /// Tags/keywords
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
 }
 
 impl SearchResult {
-    /// Constructs a new `RawSearchResult` with the given arguments needed for the struct.
+    /// Constructs a new `SearchResult` with the given arguments needed for the struct.
+    /// Uses Default for all optional SearXNG-compatible fields.
     ///
     /// # Arguments
     ///
@@ -47,7 +218,19 @@ impl SearchResult {
             description: description.to_owned(),
             relevance_score: 0.0,
             engine: engine.iter().map(|name| name.to_string()).collect(),
+            ..Default::default()
         }
+    }
+
+    /// Constructs a new `SearchResult` with extended SearXNG fields.
+    /// Use this builder for results that have additional metadata like thumbnails.
+    pub fn with_extras(
+        title: &str,
+        url: &str,
+        description: &str,
+        engine: &[&str],
+    ) -> SearchResultBuilder {
+        SearchResultBuilder::new(title, url, description, engine)
     }
     /// calculates and update the relevance score of the current search.
     ///
@@ -102,6 +285,268 @@ impl SearchResult {
     /// An engine name stored as a string from the struct.
     pub fn engine(&mut self) -> String {
         std::mem::take(&mut self.engine[0])
+    }
+}
+
+/// Builder for creating SearchResult with optional SearXNG-compatible fields.
+/// This provides a fluent API for constructing results with additional metadata.
+#[derive(Clone, Default)]
+pub struct SearchResultBuilder {
+    result: SearchResult,
+}
+
+impl SearchResultBuilder {
+    /// Create a new builder with required fields
+    pub fn new(title: &str, url: &str, description: &str, engine: &[&str]) -> Self {
+        Self {
+            result: SearchResult::new(title, url, description, engine),
+        }
+    }
+
+    /// Set the thumbnail URL
+    pub fn thumbnail(mut self, url: impl Into<String>) -> Self {
+        self.result.thumbnail = Some(url.into());
+        self
+    }
+
+    /// Set the full-size image URL
+    pub fn img_src(mut self, url: impl Into<String>) -> Self {
+        self.result.img_src = Some(url.into());
+        self
+    }
+
+    /// Set the thumbnail source URL (alternative)
+    pub fn thumbnail_src(mut self, url: impl Into<String>) -> Self {
+        self.result.thumbnail_src = Some(url.into());
+        self
+    }
+
+    /// Set the image format
+    pub fn img_format(mut self, format: impl Into<String>) -> Self {
+        self.result.img_format = Some(format.into());
+        self
+    }
+
+    /// Set the published date (ISO 8601 format)
+    pub fn published_date(mut self, date: impl Into<String>) -> Self {
+        self.result.published_date = Some(date.into());
+        self
+    }
+
+    /// Set the author
+    pub fn author(mut self, author: impl Into<String>) -> Self {
+        self.result.author = Some(author.into());
+        self
+    }
+
+    /// Set the source website
+    pub fn source(mut self, source: impl Into<String>) -> Self {
+        self.result.source = Some(source.into());
+        self
+    }
+
+    /// Set the iframe source URL
+    pub fn iframe_src(mut self, url: impl Into<String>) -> Self {
+        self.result.iframe_src = Some(url.into());
+        self
+    }
+
+    /// Set the audio source URL
+    pub fn audio_src(mut self, url: impl Into<String>) -> Self {
+        self.result.audio_src = Some(url.into());
+        self
+    }
+
+    /// Set the duration/length in seconds
+    pub fn length(mut self, seconds: u64) -> Self {
+        self.result.length = Some(seconds);
+        self
+    }
+
+    /// Set the view count
+    pub fn views(mut self, views: impl Into<String>) -> Self {
+        self.result.views = Some(views.into());
+        self
+    }
+
+    /// Set metadata
+    pub fn metadata(mut self, metadata: impl Into<String>) -> Self {
+        self.result.metadata = Some(metadata.into());
+        self
+    }
+
+    /// Set the template name
+    pub fn template(mut self, template: impl Into<String>) -> Self {
+        self.result.template = Some(template.into());
+        self
+    }
+
+    /// Set the category
+    pub fn category(mut self, category: impl Into<String>) -> Self {
+        self.result.category = Some(category.into());
+        self
+    }
+
+    /// Set magnet link (for torrents)
+    pub fn magnetlink(mut self, link: impl Into<String>) -> Self {
+        self.result.magnetlink = Some(link.into());
+        self
+    }
+
+    /// Set torrent file URL
+    pub fn torrentfile(mut self, url: impl Into<String>) -> Self {
+        self.result.torrentfile = Some(url.into());
+        self
+    }
+
+    /// Set seed count (for torrents)
+    pub fn seed(mut self, count: u32) -> Self {
+        self.result.seed = Some(count);
+        self
+    }
+
+    /// Set leech count (for torrents)
+    pub fn leech(mut self, count: u32) -> Self {
+        self.result.leech = Some(count);
+        self
+    }
+
+    /// Set file size in bytes
+    pub fn filesize(mut self, size: u64) -> Self {
+        self.result.filesize = Some(size);
+        self
+    }
+
+    /// Set human-readable file size
+    pub fn filesize_human(mut self, size: impl Into<String>) -> Self {
+        self.result.filesize_human = Some(size.into());
+        self
+    }
+
+    /// Set DOI (for academic papers)
+    pub fn doi(mut self, doi: impl Into<String>) -> Self {
+        self.result.doi = Some(doi.into());
+        self
+    }
+
+    /// Set open access flag
+    pub fn open_access(mut self, is_open: bool) -> Self {
+        self.result.open_access = Some(is_open);
+        self
+    }
+
+    /// Set comments URL
+    pub fn comments(mut self, url: impl Into<String>) -> Self {
+        self.result.comments = Some(url.into());
+        self
+    }
+
+    /// Set ISBN
+    pub fn isbn(mut self, isbn: impl Into<String>) -> Self {
+        self.result.isbn = Some(isbn.into());
+        self
+    }
+
+    /// Set publisher
+    pub fn publisher(mut self, publisher: impl Into<String>) -> Self {
+        self.result.publisher = Some(publisher.into());
+        self
+    }
+
+    /// Set journal name
+    pub fn journal(mut self, journal: impl Into<String>) -> Self {
+        self.result.journal = Some(journal.into());
+        self
+    }
+
+    /// Set price
+    pub fn price(mut self, price: impl Into<String>) -> Self {
+        self.result.price = Some(price.into());
+        self
+    }
+
+    /// Set currency code
+    pub fn currency(mut self, currency: impl Into<String>) -> Self {
+        self.result.currency = Some(currency.into());
+        self
+    }
+
+    /// Set shipping info
+    pub fn shipping(mut self, shipping: impl Into<String>) -> Self {
+        self.result.shipping = Some(shipping.into());
+        self
+    }
+
+    /// Set coordinates
+    pub fn coordinates(mut self, lat: f64, lon: f64) -> Self {
+        self.result.latitude = Some(lat);
+        self.result.longitude = Some(lon);
+        self
+    }
+
+    /// Set address
+    pub fn address(mut self, address: impl Into<String>) -> Self {
+        self.result.address = Some(address.into());
+        self
+    }
+
+    /// Set phone number
+    pub fn phone(mut self, phone: impl Into<String>) -> Self {
+        self.result.phone = Some(phone.into());
+        self
+    }
+
+    /// Set rating
+    pub fn rating(mut self, rating: impl Into<String>) -> Self {
+        self.result.rating = Some(rating.into());
+        self
+    }
+
+    /// Set review count
+    pub fn reviews(mut self, count: u32) -> Self {
+        self.result.reviews = Some(count);
+        self
+    }
+
+    /// Set programming language
+    pub fn code_language(mut self, lang: impl Into<String>) -> Self {
+        self.result.code_language = Some(lang.into());
+        self
+    }
+
+    /// Set code snippet
+    pub fn code(mut self, code: impl Into<String>) -> Self {
+        self.result.code = Some(code.into());
+        self
+    }
+
+    /// Set package version
+    pub fn version(mut self, version: impl Into<String>) -> Self {
+        self.result.version = Some(version.into());
+        self
+    }
+
+    /// Set download count
+    pub fn downloads(mut self, downloads: impl Into<String>) -> Self {
+        self.result.downloads = Some(downloads.into());
+        self
+    }
+
+    /// Set license
+    pub fn license(mut self, license: impl Into<String>) -> Self {
+        self.result.license = Some(license.into());
+        self
+    }
+
+    /// Set tags
+    pub fn tags(mut self, tags: Vec<String>) -> Self {
+        self.result.tags = Some(tags);
+        self
+    }
+
+    /// Build the final SearchResult
+    pub fn build(self) -> SearchResult {
+        self.result
     }
 }
 

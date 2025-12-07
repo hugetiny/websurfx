@@ -77,6 +77,7 @@ impl SearchEngine for Lobsters {
                         description: format!("⬆{} 💬{} - {}", score, comments, description),
                         engine: vec!["lobsters".to_string()],
                         relevance_score: 0.0,
+                        ..Default::default()
                     },
                 ));
             }

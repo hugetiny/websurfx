@@ -90,6 +90,7 @@ impl SearchEngine for Wikicommons {
                                 description: snippet_clean,
                                 engine: vec!["wikicommons".to_string()],
                                 relevance_score: 0.0,
+                                ..Default::default()
                             },
                         ));
                     }

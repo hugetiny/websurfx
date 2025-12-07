@@ -80,6 +80,7 @@ impl SearchEngine for Flickr {
                             description: String::new(),
                             engine: vec!["flickr".to_string()],
                             relevance_score: 0.0,
+                            ..Default::default()
                         },
                     ));
                 }

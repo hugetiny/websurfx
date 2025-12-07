@@ -77,6 +77,7 @@ impl SearchEngine for Pixabay {
                             description: "Free image from Pixabay".to_string(),
                             engine: vec!["pixabay".to_string()],
                             relevance_score: 0.0,
+                            ..Default::default()
                         },
                     ));
                 }

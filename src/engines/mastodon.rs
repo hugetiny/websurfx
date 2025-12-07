@@ -40,6 +40,7 @@ impl SearchEngine for Mastodon {
                 description: "Search hashtag on Mastodon".to_string(),
                 engine: vec!["mastodon".to_string()],
                 relevance_score: 0.0,
+                ..Default::default()
             },
         )];
 

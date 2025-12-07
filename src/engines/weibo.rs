@@ -40,6 +40,7 @@ impl SearchEngine for Weibo {
                 description: "在微博搜索热门内容".to_string(),
                 engine: vec!["weibo".to_string()],
                 relevance_score: 0.0,
+                ..Default::default()
             },
         )];
 

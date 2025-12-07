@@ -98,6 +98,7 @@ impl SearchEngine for SemanticScholar {
                             description: desc,
                             engine: vec!["semanticscholar".to_string()],
                             relevance_score: 0.0,
+                            ..Default::default()
                         },
                     ));
                 }

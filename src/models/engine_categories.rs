@@ -2320,6 +2320,17 @@ fn init_engine_registry(map: &mut HashMap<&'static str, EngineInfo>) {
     });
 
     // ===== Batch 6: News Engines =====
+    map.insert("bing news", EngineInfo {
+        name: "bing news",
+        display_name: "Bing News",
+        categories: &[EngineCategory::News],
+        subcategory: EngineSubcategory::None,
+        shortcut: "!bn",
+        default_enabled: true,
+        region: "",
+        description: "Microsoft Bing News search with thumbnails",
+    });
+
     map.insert("reuters", EngineInfo {
         name: "reuters",
         display_name: "Reuters",

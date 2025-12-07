@@ -72,6 +72,7 @@ impl SearchEngine for DeviantArt {
                             description: "Artwork from DeviantArt".to_string(),
                             engine: vec!["deviantart".to_string()],
                             relevance_score: 0.0,
+                            ..Default::default()
                         },
                     ));
                 }

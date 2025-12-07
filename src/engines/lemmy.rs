@@ -99,6 +99,7 @@ impl SearchEngine for Lemmy {
                                 ),
                                 engine: vec!["lemmy".to_string()],
                                 relevance_score: 0.0,
+                                ..Default::default()
                             },
                         ));
                     }

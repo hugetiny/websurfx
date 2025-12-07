@@ -90,6 +90,7 @@ impl SearchEngine for Wikiversity {
                                 description: snippet_clean,
                                 engine: vec!["wikiversity".to_string()],
                                 relevance_score: 0.0,
+                                ..Default::default()
                             },
                         ));
                     }

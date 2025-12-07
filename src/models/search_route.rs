@@ -14,9 +14,18 @@ pub struct SearchParams {
     /// It stores the search parameter `page` (or pageno in simple words)
     /// of the search url.
     pub page: Option<u32>,
+    /// It stores the search parameter `pageno` - alternative to `page` for SearXNG compatibility.
+    pub pageno: Option<u32>,
     /// It stores the search parameter `safesearch` (or safe search level in simple words) of the
     /// search url.
     pub safesearch: Option<u8>,
+    /// It stores the comma-separated list of engines to use for the search.
+    /// This is for SearXNG API compatibility.
+    pub engines: Option<Cow<'static, str>>,
+    /// It stores the search language preference.
+    pub language: Option<Cow<'static, str>>,
+    /// It stores the search categories.
+    pub categories: Option<Cow<'static, str>>,
 }
 
 /// A named struct which is used to deserialize the cookies fetched from the client side.

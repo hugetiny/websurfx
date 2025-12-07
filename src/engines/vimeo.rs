@@ -84,6 +84,7 @@ impl SearchEngine for Vimeo {
                             description,
                             engine: vec!["vimeo".to_string()],
                             relevance_score: 0.0,
+                            ..Default::default()
                         },
                     ));
                 }

@@ -90,6 +90,7 @@ impl SearchEngine for Wikiquote {
                                 description: snippet_clean,
                                 engine: vec!["wikiquote".to_string()],
                                 relevance_score: 0.0,
+                                ..Default::default()
                             },
                         ));
                     }

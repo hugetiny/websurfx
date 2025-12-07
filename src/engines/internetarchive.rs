@@ -90,6 +90,7 @@ impl SearchEngine for InternetArchive {
                                 description: format!("[{}] {}", mediatype, description),
                                 engine: vec!["internetarchive".to_string()],
                                 relevance_score: 0.0,
+                                ..Default::default()
                             },
                         ));
                     }

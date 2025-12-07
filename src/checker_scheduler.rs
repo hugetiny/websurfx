@@ -173,13 +173,13 @@ impl CheckerScheduler {
         } else {
             config.engines.clone()
         };
-        
+
         let engine_names: Vec<&str> = engine_names_owned.iter().map(|s| s.as_str()).collect();
 
         // Run the checks with timeout
         let check_timeout = Duration::from_secs(config.max_duration_secs);
         let check_future = checker.check_engines(&engine_names);
-        
+
         let results = match tokio::time::timeout(check_timeout, check_future).await {
             Ok(results) => results,
             Err(_) => {
@@ -187,26 +187,26 @@ impl CheckerScheduler {
                     message: "Check timeout exceeded".to_string(),
                     timestamp: current_timestamp(),
                 };
-                
+
                 // Store result
                 {
                     let mut r = self.last_result.write().await;
                     *r = result.clone();
                 }
-                
+
                 // Mark as not running
                 {
                     let mut running = self.is_running.write().await;
                     *running = false;
                 }
-                
+
                 return result;
             }
         };
 
         // Process results
         let mut engine_results = HashMap::new();
-        
+
         for (name, check_result) in &results {
             let success = check_result.success;
             let errors = if success {
@@ -271,7 +271,7 @@ impl CheckerScheduler {
     /// Start the background scheduler
     pub async fn start(self: Arc<Self>) {
         let config = self.config.read().await.clone();
-        
+
         if !config.enabled {
             log::info!("Checker scheduler is disabled");
             {
@@ -286,14 +286,14 @@ impl CheckerScheduler {
 
         let handle = tokio::spawn(async move {
             let mut ticker = interval(interval_duration);
-            
+
             // Run initial check
             log::info!("Starting initial engine check");
             scheduler.run_check().await;
 
             loop {
                 ticker.tick().await;
-                
+
                 // Check if still enabled
                 let config = scheduler.get_config().await;
                 if !config.enabled {
@@ -325,11 +325,11 @@ impl CheckerScheduler {
     /// Get engine reliabilities from last check
     pub async fn get_engine_reliabilities(&self) -> HashMap<String, ReliabilityInfo> {
         let result = self.last_result.read().await.clone();
-        
+
         match result {
             CheckerResult::Ok { engines, .. } => {
                 let mut reliabilities = HashMap::new();
-                
+
                 for (name, check_result) in engines {
                     let reliability = if check_result.success {
                         Some(100.0)
@@ -355,7 +355,7 @@ impl CheckerScheduler {
                         checker,
                     });
                 }
-                
+
                 reliabilities
             }
             _ => HashMap::new(),
@@ -427,7 +427,7 @@ mod tests {
     async fn test_scheduler_creation() {
         let scheduler = CheckerScheduler::new();
         assert!(!scheduler.is_running().await);
-        
+
         let result = scheduler.get_result().await;
         assert!(matches!(result, CheckerResult::Unknown));
     }

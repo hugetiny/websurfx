@@ -92,6 +92,7 @@ impl SearchEngine for Wikibooks {
                                 description: snippet_clean,
                                 engine: vec!["wikibooks".to_string()],
                                 relevance_score: 0.0,
+                                ..Default::default()
                             },
                         ));
                     }

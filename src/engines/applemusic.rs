@@ -40,6 +40,7 @@ impl SearchEngine for AppleMusic {
                 description: "Search music on Apple Music".to_string(),
                 engine: vec!["applemusic".to_string()],
                 relevance_score: 0.0,
+                ..Default::default()
             },
         )];
 

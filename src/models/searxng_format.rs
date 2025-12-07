@@ -270,17 +270,24 @@ pub fn convert_to_searxng_format(
             let engines = result.engine.clone();
             let primary_engine = engines.first().cloned();
 
-            // Determine category from engine if available
-            let result_category = primary_engine
-                .as_ref()
-                .and_then(|e| get_engine_info(e))
-                .and_then(|info| info.categories.first())
-                .map(|cat| cat.display_name().to_string())
+            // Determine category from result or engine
+            let result_category = result.category.clone()
+                .or_else(|| {
+                    primary_engine
+                        .as_ref()
+                        .and_then(|e| get_engine_info(e))
+                        .and_then(|info| info.categories.first())
+                        .map(|cat| cat.display_name().to_string())
+                })
                 .unwrap_or_else(|| default_category.clone());
 
             // Parse URL for display
             let parsed_url = parse_url_components(&result.url);
             let pretty_url = create_pretty_url(&result.url);
+
+            // Use template from result or default based on category
+            let template = result.template.clone()
+                .unwrap_or_else(|| determine_template(&result_category));
 
             SearxngResult {
                 url: result.url.clone(),
@@ -290,24 +297,25 @@ pub fn convert_to_searxng_format(
                 engines: if engines.len() > 1 { Some(engines) } else { None },
                 positions: Some(vec![idx as u32 + 1]),
                 parsed_url: Some(parsed_url),
-                template: Some("default".to_string()),
-                thumbnail: None,
-                img_src: None,
-                img_format: None,
-                published_date: None,
+                template: Some(template),
+                // Pass through all SearXNG-compatible fields from the result
+                thumbnail: result.thumbnail.clone(),
+                img_src: result.img_src.clone(),
+                img_format: result.img_format.clone(),
+                published_date: result.published_date.clone(),
                 pretty_url: Some(pretty_url),
-                magnetlink: None,
-                torrentfile: None,
-                seed: None,
-                leech: None,
-                filesize: None,
-                author: None,
-                iframe_src: None,
+                magnetlink: result.magnetlink.clone(),
+                torrentfile: result.torrentfile.clone(),
+                seed: result.seed,
+                leech: result.leech,
+                filesize: result.filesize,
+                author: result.author.clone(),
+                iframe_src: result.iframe_src.clone(),
                 score: result.relevance_score as f64,
                 category: result_category,
-                open_access: None,
-                doi: None,
-                comments: None,
+                open_access: result.open_access,
+                doi: result.doi.clone(),
+                comments: result.comments.clone(),
             }
         })
         .collect();
@@ -320,7 +328,7 @@ pub fn convert_to_searxng_format(
             engine: err.engine.clone(),
             error_type: err.error.clone(),
             message: Some(err.error.clone()),
-            suspended: None,
+            suspended: Some(err.suspended),
         })
         .collect();
 
@@ -335,6 +343,21 @@ pub fn convert_to_searxng_format(
         unresponsive_engines: unresponsive,
         timings: Vec::new(),
         search_time: None,
+    }
+}
+
+/// Determine the appropriate template based on category
+fn determine_template(category: &str) -> String {
+    match category.to_lowercase().as_str() {
+        "images" => "images.html".to_string(),
+        "videos" => "videos.html".to_string(),
+        "news" => "default.html".to_string(),
+        "music" => "default.html".to_string(),
+        "files" | "torrents" => "torrent.html".to_string(),
+        "science" | "scientific publications" => "paper.html".to_string(),
+        "it" | "packages" => "packages.html".to_string(),
+        "map" => "map.html".to_string(),
+        _ => "default.html".to_string(),
     }
 }
 

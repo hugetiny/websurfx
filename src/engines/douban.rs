@@ -40,6 +40,7 @@ impl SearchEngine for Douban {
                 description: "在豆瓣搜索电影、图书、音乐".to_string(),
                 engine: vec!["douban".to_string()],
                 relevance_score: 0.0,
+                ..Default::default()
             },
         )];
 

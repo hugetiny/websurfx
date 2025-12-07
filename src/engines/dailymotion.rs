@@ -80,6 +80,7 @@ impl SearchEngine for Dailymotion {
                             description,
                             engine: vec!["dailymotion".to_string()],
                             relevance_score: 0.0,
+                            ..Default::default()
                         },
                     ));
                 }

@@ -94,6 +94,7 @@ impl SearchEngine for Genius {
                                     description: format!("Lyrics by {}", artist),
                                     engine: vec!["genius".to_string()],
                                     relevance_score: 0.0,
+                                    ..Default::default()
                                 },
                             ));
                         }

@@ -95,6 +95,7 @@ impl SearchEngine for Amazon {
                             description,
                             engine: vec!["amazon".to_string()],
                             relevance_score: 0.0,
+                            ..Default::default()
                         },
                     ));
                 }

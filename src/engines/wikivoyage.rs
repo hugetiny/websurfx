@@ -90,6 +90,7 @@ impl SearchEngine for Wikivoyage {
                                 description: snippet_clean,
                                 engine: vec!["wikivoyage".to_string()],
                                 relevance_score: 0.0,
+                                ..Default::default()
                             },
                         ));
                     }

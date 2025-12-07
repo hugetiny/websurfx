@@ -41,6 +41,7 @@ impl SearchEngine for Zhihu {
                 description: "在知乎搜索问答内容".to_string(),
                 engine: vec!["zhihu".to_string()],
                 relevance_score: 0.0,
+                ..Default::default()
             },
         )];
 

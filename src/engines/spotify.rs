@@ -40,6 +40,7 @@ impl SearchEngine for Spotify {
                 description: "Search music on Spotify".to_string(),
                 engine: vec!["spotify".to_string()],
                 relevance_score: 0.0,
+                ..Default::default()
             },
         )];
 

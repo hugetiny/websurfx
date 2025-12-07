@@ -90,6 +90,7 @@ impl SearchEngine for Wiktionary {
                                 description: snippet_clean,
                                 engine: vec!["wiktionary".to_string()],
                                 relevance_score: 0.0,
+                                ..Default::default()
                             },
                         ));
                     }

@@ -267,6 +267,10 @@ impl EngineHandler {
                     let engine = crate::engines::bing::Bing::new()?;
                     ("bing", Box::new(engine))
                 }
+                "bing news" | "bingnews" | "bing_news" => {
+                    let engine = crate::engines::bing_news::BingNews::new()?;
+                    ("bing news", Box::new(engine))
+                }
                 "wikipedia" => {
                     let engine = crate::engines::wikipedia::Wikipedia::new("en")?;
                     ("wikipedia", Box::new(engine))

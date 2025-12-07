@@ -81,6 +81,7 @@ impl SearchEngine for OpenStreetMap {
                         description: format!("Type: {} | Coordinates: {}, {}", place_type, lat, lon),
                         engine: vec!["openstreetmap".to_string()],
                         relevance_score: 0.0,
+                        ..Default::default()
                     },
                 ));
             }
